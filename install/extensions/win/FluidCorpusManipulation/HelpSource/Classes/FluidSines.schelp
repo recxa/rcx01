@@ -1,0 +1,273 @@
+TITLE:: FluidSines
+SUMMARY:: Sinusoidal Modelling and Resynthesis
+CATEGORIES:: Libraries>FluidCorpusManipulation
+RELATED:: Classes/FluidBufSines,Classes/FluidTransients,Classes/FluidHPSS,Guides/FluidCorpusManipulation,Classes/SinOsc
+DESCRIPTION::
+
+    
+    Sinusoidal Modelling process on its audio input.
+
+
+    
+    It implements a mix of algorithms taken from classic papers.
+
+    DEFINITIONLIST::
+    ## The algorithm will take an audio in, and will divide it in two parts:
+    || 
+    LIST::
+    ## 
+    a reconstruction of what it detects as sinusoidal;
+
+    ## 
+    a residual derived from the previous signal to allow null-summing
+
+    ::
+    ::
+    The whole process is based on the assumption that signal is made of pitched steady components that have a long-enough duration and are periodic enough to be perceived as such, that can be tracked, resynthesised and removed from the original, leaving behind what is considered as non-pitched, noisy, and/or transient. It first tracks the peaks, then checks if they are the continuation of a peak in previous spectral frames, by assigning them a track.
+
+
+Read more about FluidSines on the link::https://learn.flucoma.org/reference/sines##learn platform::.
+
+CLASSMETHODS::
+
+METHOD:: ar
+
+ARGUMENT:: in
+The audio to be processed.
+
+
+
+
+
+
+
+
+ARGUMENT:: bandwidth
+
+    
+    The number of bins used to resynthesise a peak. It has an effect on CPU cost: the widest is more accurate but more computationally expensive. It is capped at (fftSize / 2) + 1.
+
+    STRONG::Constraints::
+
+    LIST::
+    ## 
+    Minimum: CODE::1::
+
+    ## 
+    Maximum: CODE::(FFT Size / 2) + 1 (see fft settings)::
+
+    ::
+
+
+ARGUMENT:: detectionThreshold
+
+    
+    The threshold in dB above which a magnitude peak is considered to be a sinusoidal component.
+
+    STRONG::Constraints::
+
+    LIST::
+    ## 
+    Minimum: CODE::-144::
+
+    ## 
+    Maximum: CODE::0::
+
+    ::
+
+
+ARGUMENT:: birthLowThreshold
+
+    
+    The threshold in dB above which to consider a peak to start a sinusoidal component tracking, for the low end of the spectrum. It is interpolated across the spectrum until birthHighThreshold at half-Nyquist.
+
+    STRONG::Constraints::
+
+    LIST::
+    ## 
+    Minimum: CODE::-144::
+
+    ## 
+    Maximum: CODE::0::
+
+    ::
+
+
+ARGUMENT:: birthHighThreshold
+
+    
+    The threshold in dB above which to consider a peak to start a sinusoidal component tracking, for the high end of the spectrum. It is interpolated across the spectrum until birthLowThreshold at DC.
+
+    STRONG::Constraints::
+
+    LIST::
+    ## 
+    Minimum: CODE::-144::
+
+    ## 
+    Maximum: CODE::0::
+
+    ::
+
+
+ARGUMENT:: minTrackLen
+
+    
+    The minimum duration, in spectral frames, for a sinusoidal track to be accepted as a partial. It allows to remove bubbly pitchy artefacts, but is more CPU intensive and might reject quick pitch material.
+
+    STRONG::Constraints::
+
+    LIST::
+    ## 
+    Minimum: CODE::1::
+
+    ::
+
+
+ARGUMENT:: trackMethod
+
+    
+    The algorithm used to track the sinusoidal continuity between spectral frames. 0 is the default, "Greedy", and 1 is a more expensive [^"Hungarian"]( Neri, J., and Depalle, P., "Fast Partial Tracking of Audio with Real-Time Capability through Linear Programming". Proceedings of DAFx-2018. ) one.
+
+
+
+ARGUMENT:: trackMagRange
+
+    
+    The amplitude difference allowed for a track to diverge between frames, in dB.
+
+    STRONG::Constraints::
+
+    LIST::
+    ## 
+    Minimum: CODE::1.0::
+
+    ## 
+    Maximum: CODE::200.0::
+
+    ::
+
+
+ARGUMENT:: trackFreqRange
+
+    
+    The frequency difference allowed for a track to diverge between frames, in Hertz.
+
+    STRONG::Constraints::
+
+    LIST::
+    ## 
+    Minimum: CODE::1.0::
+
+    ## 
+    Maximum: CODE::10000.0::
+
+    ::
+
+
+ARGUMENT:: trackProb
+
+    
+    The probability of the tracking algorithm to find a track.
+
+    STRONG::Constraints::
+
+    LIST::
+    ## 
+    Minimum: CODE::0.0::
+
+    ## 
+    Maximum: CODE::1.0::
+
+    ::
+
+
+ARGUMENT:: windowSize
+
+    
+    The window size. As sinusoidal estimation relies on spectral frames, we need to decide what precision we give it spectrally and temporally. For more information visit LINK::https://learn.flucoma.org/learn/fourier-transform/::
+
+
+
+ARGUMENT:: hopSize
+
+    
+    The window hop size. As sinusoidal estimation relies on spectral frames, we need to move the window forward. It can be any size, but low overlap will create audible artefacts. The -1 default value will default to half of windowSize (overlap of 2).
+
+
+
+ARGUMENT:: fftSize
+
+    
+    The inner FFT/IFFT size. It should be at least 4 samples long, at least the size of the window, and a power of 2. Making it larger allows an oversampling of the spectral precision. The -1 default value will default to windowSize. The -1 default value will default to the highest of windowSize and (bandwidth - 1) * 2.
+
+
+
+ARGUMENT:: maxFFTSize
+
+    
+    Set an explicit upper bound on the FFT size at object instantiation. The default of CODE::nil:: or -1 sets this to whatever the initial FFT size is
+
+
+
+ 
+ 
+
+INSTANCEMETHODS::
+  
+EXAMPLES::
+
+CODE::
+
+~src = Buffer.readChannel(s,FluidFilesPath("Tremblay-BeatRemember.wav"),channels:[0]);
+
+(
+~synth = {
+	arg which = 0, detectionThreshold = -96, minTrackLen = 15;
+	var src = PlayBuf.ar(1,~src,BufRateScale.ir(~src),loop:1);
+	var sines, residual;
+	# sines, residual = FluidSines.ar(src,detectionThreshold:detectionThreshold,minTrackLen:minTrackLen);
+	Select.ar(which,[sines,residual]).dup;
+}.play;
+)
+
+~synth.set(\which,1) // residual
+~synth.set(\which,0) // back to sinusoids
+
+// try some different parameters
+
+// tracks can be short but the detection threshold is higher than the default
+~synth.set(\detectionThreshold,-40,\minTrackLen,1)
+
+// increase the minimum track length
+~synth.set(\detectionThreshold,-40,\minTrackLen,15)
+
+// lower the threshold but increase the track length drastically
+~synth.set(\detectionThreshold,-80,\minTrackLen,50)
+
+// increase the threshold drastically but lower the minimum track length
+~synth.set(\detectionThreshold,-24,\minTrackLen,1)
+::
+strong::a little more explanation::
+With these settings everything in the sound is considered a sinusoid, even short and quiet peaks.
+
+Because the decomposition is a windowed process, the detected sinusoidal peaks are located in time based on the window of analysis. When the oscillator changes (even slowly) over time we hear the artefact in the residual output.
+code::
+
+(
+~synth = {
+	arg which = 0;
+	var stable = SinOsc.ar(69.midicps,0,0.1);
+	var oscillating = SinOsc.ar(SinOsc.kr(0.1,0,12,57).midicps,0,0.1);
+	var sig = SelectX.ar(which.lag(0.1),[stable,oscillating]);
+	var sines, residual;
+	# sines, residual = FluidSines.ar(sig,76,-144,-144,-144,1,0,200,1000,0);
+	[sines, residual * (which*20).dbamp.lag]
+}.play
+)
+
+~synth.set(\which,1);
+
+~synth.set(\which,0);
+
+::

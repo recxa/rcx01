@@ -1,0 +1,416 @@
+TITLE:: FluidBufNoveltySlice
+SUMMARY:: Buffer-Based Novelty-Based Slicer
+CATEGORIES:: Libraries>FluidCorpusManipulation
+RELATED:: Classes/FluidNoveltySlice,Classes/FluidBufAmpSlice,Classes/FluidBufOnsetSlice,Classes/FluidBufTransientSlice,Guides/FluidCorpusManipulation
+DESCRIPTION::
+
+    
+    A non-realtime slicer using an algorithm assessing novelty in the signal to estimate the slicing points.
+
+
+    
+    A novelty curve is derived from running a kernel across the diagonal of the similarity matrix, and looking for peaks of changes. It implements the seminal results published in  'Automatic Audio Segmentation Using a Measure of Audio Novelty' by J Foote.
+
+    The process will return a buffer which contains indices (in samples) of estimated starting points of different slices.
+
+    The argument for CODE::algorithm:: can be passed as an integer (see table below), or as one of the following symbols: CODE::\spectrum::, CODE::\mfcc::, CODE::\chroma::, CODE::\pitch::, or CODE::\loudness::.
+
+
+Read more about FluidBufNoveltySlice on the link::https://learn.flucoma.org/reference/noveltyslice##learn platform::.
+
+CLASSMETHODS::
+
+METHOD:: process, processBlocking
+  Processs the source LINK::Classes/Buffer:: on the LINK::Classes/Server::. CODE::processBlocking:: will execute directly in the server command FIFO, whereas CODE::process:: will delegate to a separate worker thread. The latter is generally only worthwhile for longer-running jobs where you don't wish to tie up the server.
+
+ARGUMENT:: server
+	The LINK::Classes/Server:: on which the buffers to be processed are allocated.
+
+
+
+
+
+
+
+
+ARGUMENT:: source
+
+    
+    The buffer to use as the source material to be sliced through novelty identification. The different channels of multichannel buffers will be summed.
+
+
+
+ARGUMENT:: startFrame
+
+    
+    Where in the srcBuf should the slicing process start, in samples.
+
+    STRONG::Constraints::
+
+    LIST::
+    ## 
+    Minimum: CODE::0::
+
+    ::
+
+
+ARGUMENT:: numFrames
+
+    
+    How many frames should be processed.
+
+
+
+ARGUMENT:: startChan
+
+    
+    For multichannel srcBuf, which channel should be processed.
+
+    STRONG::Constraints::
+
+    LIST::
+    ## 
+    Minimum: CODE::0::
+
+    ::
+
+
+ARGUMENT:: numChans
+
+    
+    For multichannel srcBuf, how many channels should be summed.
+
+
+
+ARGUMENT:: indices
+
+    
+    The buffer where the indices (in samples) of the estimated starting points of slices will be written. The first and last points are always the boundary points of the analysis.
+
+
+
+ARGUMENT:: algorithm
+
+    
+    The feature on which novelty is computed.
+
+
+table::## 0 || 
+Spectrum – The magnitude of the full spectrum.
+## 1 || 
+MFCC – 13 Mel-Frequency Cepstrum Coefficients.
+## 2 || 
+Chroma - The contour of a 12-band chromagram.
+## 3 || 
+Pitch – The pitch and its confidence.
+## 4 || 
+Loudness – The true peak and loudness.
+::
+ARGUMENT:: kernelSize
+
+    
+    The granularity of the window in which the algorithm looks for change, in hops. A small number will be sensitive to short term changes, and a large number should look for long term changes.
+
+    STRONG::Constraints::
+
+    LIST::
+    ## 
+    Minimum: CODE::3::
+
+    ## 
+    Maximum: CODE::maxkernelSize::
+
+    ## 
+    Snaps to odd numbers
+
+    ::
+
+
+ARGUMENT:: threshold
+
+    
+    The normalised threshold, between 0 and 1, on the novelty curve to consider it a segmentation point.
+
+    STRONG::Constraints::
+
+    LIST::
+    ## 
+    Minimum: CODE::0::
+
+    ::
+
+
+ARGUMENT:: filterSize
+
+    
+    The size (in hops) of a smoothing filter that is applied on the novelty curve. A larger filter size allows for cleaner cuts on very sharp changes.
+
+    STRONG::Constraints::
+
+    LIST::
+    ## 
+    Minimum: CODE::1::
+
+    ## 
+    Maximum: CODE::maxfilterSize::
+
+    ::
+
+
+ARGUMENT:: minSliceLength
+
+    
+    The minimum duration of a slice in number of hops.
+
+    STRONG::Constraints::
+
+    LIST::
+    ## 
+    Minimum: CODE::0::
+
+    ::
+
+
+ARGUMENT:: windowSize
+
+    
+    The window size. As novelty estimation relies on spectral frames, we need to decide what precision we give it spectrally and temporally. For more information visit LINK::https://learn.flucoma.org/learn/fourier-transform/::
+
+
+
+ARGUMENT:: hopSize
+
+    
+    The window hop size. As novelty estimation relies on spectral frames, we need to move the window forward. It can be any size, but low overlap will create audible artefacts.
+
+
+
+ARGUMENT:: fftSize
+
+    
+    The inner FFT/IFFT size. It should be at least 4 samples long, at least the size of the window, and a power of 2. Making it larger allows an oversampling of the spectral precision.
+
+
+
+ 
+ARGUMENT:: freeWhenDone
+  Free the server instance when processing complete. Default CODE::true::
+
+ARGUMENT:: action
+	A function to be evaluated once the offline process has finished and all Buffer's instance variables have been updated on the client side. The function will be passed CODE::[features]:: as an argument.
+
+RETURNS:: An instance of the processor
+
+METHOD:: kr
+  Trigger the equivalent behaviour to CODE::processBlocking / process:: from a LINK::Classes/Synth::. Can be useful for expressing a sequence of buffer and data processing jobs to execute. Note that the work still executes on the server command FIFO (not the audio thread), and it is the caller's responsibility to manage the sequencing, using the CODE::done:: status of the various UGens.
+
+
+
+
+
+
+
+ARGUMENT:: source
+
+    
+    The buffer to use as the source material to be sliced through novelty identification. The different channels of multichannel buffers will be summed.
+
+
+
+ARGUMENT:: startFrame
+
+    
+    Where in the srcBuf should the slicing process start, in samples.
+
+    STRONG::Constraints::
+
+    LIST::
+    ## 
+    Minimum: CODE::0::
+
+    ::
+
+
+ARGUMENT:: numFrames
+
+    
+    How many frames should be processed.
+
+
+
+ARGUMENT:: startChan
+
+    
+    For multichannel srcBuf, which channel should be processed.
+
+    STRONG::Constraints::
+
+    LIST::
+    ## 
+    Minimum: CODE::0::
+
+    ::
+
+
+ARGUMENT:: numChans
+
+    
+    For multichannel srcBuf, how many channels should be summed.
+
+
+
+ARGUMENT:: indices
+
+    
+    The buffer where the indices (in samples) of the estimated starting points of slices will be written. The first and last points are always the boundary points of the analysis.
+
+
+
+ARGUMENT:: algorithm
+
+    
+    The feature on which novelty is computed.
+
+
+table::## 0 || 
+Spectrum – The magnitude of the full spectrum.
+## 1 || 
+MFCC – 13 Mel-Frequency Cepstrum Coefficients.
+## 2 || 
+Chroma - The contour of a 12-band chromagram.
+## 3 || 
+Pitch – The pitch and its confidence.
+## 4 || 
+Loudness – The true peak and loudness.
+::
+ARGUMENT:: kernelSize
+
+    
+    The granularity of the window in which the algorithm looks for change, in hops. A small number will be sensitive to short term changes, and a large number should look for long term changes.
+
+    STRONG::Constraints::
+
+    LIST::
+    ## 
+    Minimum: CODE::3::
+
+    ## 
+    Maximum: CODE::maxkernelSize::
+
+    ## 
+    Snaps to odd numbers
+
+    ::
+
+
+ARGUMENT:: threshold
+
+    
+    The normalised threshold, between 0 and 1, on the novelty curve to consider it a segmentation point.
+
+    STRONG::Constraints::
+
+    LIST::
+    ## 
+    Minimum: CODE::0::
+
+    ::
+
+
+ARGUMENT:: filterSize
+
+    
+    The size (in hops) of a smoothing filter that is applied on the novelty curve. A larger filter size allows for cleaner cuts on very sharp changes.
+
+    STRONG::Constraints::
+
+    LIST::
+    ## 
+    Minimum: CODE::1::
+
+    ## 
+    Maximum: CODE::maxfilterSize::
+
+    ::
+
+
+ARGUMENT:: minSliceLength
+
+    
+    The minimum duration of a slice in number of hops.
+
+    STRONG::Constraints::
+
+    LIST::
+    ## 
+    Minimum: CODE::0::
+
+    ::
+
+
+ARGUMENT:: windowSize
+
+    
+    The window size. As novelty estimation relies on spectral frames, we need to decide what precision we give it spectrally and temporally. For more information visit LINK::https://learn.flucoma.org/learn/fourier-transform/::
+
+
+
+ARGUMENT:: hopSize
+
+    
+    The window hop size. As novelty estimation relies on spectral frames, we need to move the window forward. It can be any size, but low overlap will create audible artefacts.
+
+
+
+ARGUMENT:: fftSize
+
+    
+    The inner FFT/IFFT size. It should be at least 4 samples long, at least the size of the window, and a power of 2. Making it larger allows an oversampling of the spectral precision.
+
+
+
+ 
+ARGUMENT:: trig
+  A CODE::kr:: signal that will trigger execution
+
+ARGUMENT:: blocking
+  Whether to execute this process directly on the server command FIFO or delegate to a worker thread. See CODE::processBlocking/process:: for caveats.
+
+
+INSTANCEMETHODS::
+
+METHOD:: cancel
+  Cancels non-blocking processing
+
+METHOD:: wait
+  When called in the context of a LINK::Classes/Routine:: (it won't work otherwise), will block execution until the processor has finished. This can be convinient for writing sequences of processes more linearly than using lots of nested actions.
+  
+EXAMPLES::
+code::
+
+~src = Buffer.read(s,FluidFilesPath("Nicol-LoopE-M.wav"));
+
+(
+~indices = Buffer(s);
+FluidBufNoveltySlice.processBlocking(s,~src,indices:~indices);
+FluidWaveform(~src,~indices,bounds:Rect(0,0,1600,400));
+)
+
+//loops over a slice from onset to the next slice point using MouseX to choose which
+(
+{
+    var gate_index = MouseX.kr(0,~indices.numFrames-1).poll(label:"slice index");
+    var start = BufRd.kr(1,~indices,gate_index,1,1);
+    var end = BufRd.kr(1,~indices,gate_index+1,1,1);
+    var phs = Phasor.ar(0,BufRateScale.ir(~src),start,end);
+    BufRd.ar(1,~src,phs,1,4).dup;
+}.play;
+)
+
+// instead of the raw spectrum (algorithm:0), we'll try mfccs (algorithm:1):
+(
+~indices = Buffer(s);
+FluidBufNoveltySlice.processBlocking(s,~src,algorithm:1,threshold:0.5,kernelSize:5,filterSize:5,indices:~indices,minSliceLength:5);
+FluidWaveform(~src,~indices,bounds:Rect(0,0,1600,400));
+)
+::

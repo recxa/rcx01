@@ -1,0 +1,289 @@
+TITLE:: FluidPitch
+SUMMARY:: Real-time Pitch Descriptor
+CATEGORIES:: Libraries>FluidCorpusManipulation
+RELATED:: Classes/FluidBufPitch,Classes/FluidMFCC,Classes/FluidMelBands,Classes/FluidLoudness,Classes/FluidSpectralShape,Guides/FluidCorpusManipulation,Classes/Pitch
+DESCRIPTION::
+
+    
+    Three popular monophonic pitch descriptors, all of which compute frequency and confidence.
+
+
+    
+    LINK::Classes/FluidPitch:: returns both CODE::pitch:: and CODE::confidence:: values. When no pitch can be detected, a pitch of 0 Hz is returned (or -999.0 when the unit is in MIDI note mode).
+
+    For information about the pitch descriptor algorithms, see the CODE::algorithm:: parameter below.
+
+    The "confidence" output is a value between 0 and 1 indicating how confident the algorithm is in the pitch that it is reporting. In effect this can be an estimation of how "noisy" (closer to 0) or "harmonic" (closer to 1) the spectrum is. The confidence may also be low when a signal contains polyphony, as the algorithms are not intended for multiple pitch streams.
+
+    The CODE::unit:: argument indicates whether the pitch output should be in hertz (indicated by 0) or MIDI note numbers (indicated by 1). MIDI note numbers may be useful, not only because of their direct relationship to MIDI-based synthesis systems, but also because of the logarithmic relationship to hertz, making them perceptually evenly-spaced units (1 MIDI note = 1 semitone).
+
+    For more information visit LINK::https://learn.flucoma.org/reference/pitch/::.
+
+
+Read more about FluidPitch on the link::https://learn.flucoma.org/reference/pitch##learn platform::.
+
+CLASSMETHODS::
+
+METHOD:: kr
+
+ARGUMENT:: in
+
+  Audio-rate signal to analyze
+
+
+
+
+
+
+
+
+ARGUMENT:: select
+
+    
+    An array of CODE::symbols:: indicating which analyses to return. The options are CODE::pitch:: and CODE::confidence::. If nothing is specified, the object will return all the analyses. The analyses will always appear in their normal order, this argument just allows for a selection of them to be returned. Reordering the options in this argument will not reorder how the analyses are returned.
+
+
+
+ARGUMENT:: algorithm
+
+    
+    The algorithm to estimate the pitch. (The default is 2.) The options are:
+
+
+table::## 0 || 
+Cepstrum: Returns a pitch estimate as the location of the highest peak (not including DC) in the Cepstrum of the signal.
+## 1 || 
+Harmonic Product Spectrum: Implements the Harmonic Product Spectrum algorithm for pitch detection . See e.g. A. Lerch, "An Introduction to Audio Content Analysis: Applications in Signal Processing and Music Informatics." John Wiley & Sons, 2012.https://onlinelibrary.wiley.com/doi/book/10.1002/9781118393550
+## 2 || 
+YinFFT: Implements the frequency domain version of the YIN algorithm, as described in P. M. Brossier, "Automatic Annotation of Musical Audio for Interactive Applications.” QMUL, London, UK, 2007. See also LINK::https://essentia.upf.edu/documentation/reference/streaming_PitchYinFFT.html::
+::
+ARGUMENT:: minFreq
+
+    
+    The minimum frequency that the algorithm will search for. This sets the lowest value that can be generated. The default is 20.
+
+    STRONG::Constraints::
+
+    LIST::
+    ## 
+    Minimum: CODE::0::
+
+    ## 
+    Maximum: MIN(CODE::maxFreq, 10000::)
+
+    ::
+
+
+ARGUMENT:: maxFreq
+
+    
+    The maximum frequency that the algorithm will search for. This sets the highest value that can be generated. The default is 10000.
+
+    STRONG::Constraints::
+
+    LIST::
+    ## 
+    Minimum: MAX(CODE::minFreq, 1::)
+
+    ## 
+    Maximum: CODE::20000::
+
+    ::
+
+
+ARGUMENT:: unit
+
+    
+    The unit of the pitch output. The default of 0 indicates output in Hz. A value of 1 will output MIDI note values.
+
+
+
+ARGUMENT:: windowSize
+
+    
+    The window size. As sinusoidal estimation relies on spectral frames, we need to decide what precision we give it spectrally and temporally. For more information visit LINK::https://learn.flucoma.org/learn/fourier-transform/::
+
+
+
+ARGUMENT:: hopSize
+
+    
+    The window hop size. As sinusoidal estimation relies on spectral frames, we need to move the window forward. It can be any size, but low overlap will create audible artefacts. The -1 default value will default to half of windowSize (overlap of 2).
+
+
+
+ARGUMENT:: fftSize
+
+    
+    The inner FFT/IFFT size. It should be at least 4 samples long, at least the size of the window, and a power of 2. Making it larger allows an oversampling of the spectral precision. The -1 default value will default to windowSize.
+
+
+
+ARGUMENT:: maxFFTSize
+
+    
+    Set an explicit upper bound on the FFT size at object instantiation. The default of CODE::nil:: or -1 sets this to whatever the initial FFT size is
+
+
+
+ 
+ 
+
+RETURNS::     
+    The two descriptors: [pitch, confidence]. The latency is windowSize.
+
+
+
+INSTANCEMETHODS::
+  
+EXAMPLES::
+Use the pitch and confidence descriptions to control some filtered noise.
+code::
+
+// load some audio
+~scratchy = Buffer.read(s,FluidFilesPath("Tremblay-ASWINE-ScratchySynth-M.wav"));
+
+// synth to do the analysis and drive the BPF
+(
+{
+	var src = PlayBuf.ar(~scratchy.numChannels,~scratchy,BufRateScale.ir(~scratchy),loop:1);
+	var sig, freq, conf, windowSize = 1024;
+	var latency = windowSize / SampleRate.ir;
+	# freq, conf = FluidPitch.kr(src,windowSize:windowSize);
+	freq = freq.lag(0.03);
+	sig = BPF.ar(PinkNoise.ar(1),freq.clip(1,20000),0.1,conf);
+	[DelayN.ar(src,latency,latency),sig];
+}.play;
+)
+::
+
+Use the confidence descriptor to modulate a send amount to a delay line.
+
+code::
+// load some audio
+~scratchy = Buffer.read(s,FluidFilesPath("Tremblay-ASWINE-ScratchySynth-M.wav"));
+
+// This synth sends the source sound to the delay only when the pitch confidence is above a threshold.
+// This way the scratchy, distorted parts of the sound file are not heard in the delay.
+(
+{
+	var src = PlayBuf.ar(~scratchy.numChannels,~scratchy,BufRateScale.ir(~scratchy),loop:1);
+	var sig, freq, conf, windowSize = 1024;
+	var latency = windowSize / SampleRate.ir;
+	# freq, conf = FluidPitch.kr(src,windowSize:windowSize);
+	src = DelayN.ar(src,latency,latency);
+	sig = CombC.ar(src * (conf > 0.99).lag(0.005),0.5,0.1,3);
+	[src,sig];
+}.play;
+)
+
+::
+Just watch the parameters come out.
+code::
+~bass = Buffer.read(s,FluidFilesPath("Tremblay-AaS-AcBassGuit-Melo-M.wav"));
+
+(
+{
+	var src = PlayBuf.ar(~bass.numChannels,~bass,BufRateScale.ir(~bass),loop:1);
+	var freq, conf, windowSize = 4096; //
+	var latency = windowSize / SampleRate.ir;
+	# freq, conf = FluidPitch.kr(src,windowSize:windowSize);
+	SendReply.kr(Impulse.kr(30),"/fluidpitch_help",[freq,conf]);
+	DelayN.ar(src,latency,latency);
+}.play;
+
+o = OSCFunc({
+	arg msg;
+	"freq: %\t\tmidi note: %\t\tconf: %".format(msg[3].round(0.01).asString.padLeft(8),msg[3].cpsmidi.round(0.1),msg[4].round(0.01).asString.padRight(4)).postln;
+},"/fluidpitch_help");
+)
+
+::
+Just watch the parameters come out on a strong::stereo:: signal.
+code::
+// When a stereo signal is analyzed by FluidPitch.kr it will output a 2D array as a KR stream.
+// See the .poll calls in the synth to see how the freq and conf for each channel are organized.
+~piano_stereo = Buffer.read(s,FluidFilesPath("Tremblay-SA-UprightPianoPedalWide.wav"));
+
+(
+{
+	var src = PlayBuf.ar(~piano_stereo.numChannels,~piano_stereo,BufRateScale.ir(~piano_stereo),loop:1);
+	var pitch_output, windowSize = 1024; //
+	var latency = windowSize / SampleRate.ir;
+	pitch_output = FluidPitch.kr(src,windowSize:windowSize);
+	pitch_output[0][0].poll(label:"L freq:");
+	pitch_output[0][1].poll(label:"L conf:");
+	pitch_output[1][0].poll(label:"R freq:");
+	pitch_output[1][1].poll(label:"R conf:");
+	DelayN.ar(src,latency,latency);
+}.play;
+)
+
+::
+Comparison with Pitch.kr
+code::
+(
+//a monitoring bus for the descriptors
+~bus = Bus.control(s,4);
+
+//a monitoring window for the values
+~win = Window("Frequency Monitor", Rect(400, 400, 220, 115)).front;
+
+~labels = Array.fill(4,{
+	arg i;
+	StaticText(~win, Rect(10, i * 25 + 10, 135, 20)).background_(Color.grey(0.7)).align_(\right)
+});
+~labels[0].string = ("FluidPitch: ");
+~labels[1].string = ("confidence: ");
+~labels[2].string = ("SC Pitch: ");
+~labels[3].string = ("Confidence: ");
+
+~analyses_text = Array.fill(4, {
+	arg i;
+	StaticText(~win, Rect(150, i * 25 + 10, 60, 20)).background_(Color.grey(0.7)).align_(\center);
+});
+
+//routine to update the parameters
+~update_loop = Routine{
+	{
+		~bus.get({ arg val;
+			{
+				if(~win.isClosed.not) {
+					val.do({arg item,index;
+						~analyses_text[index].string = item.round(0.01)})
+				}
+			}.defer
+		});
+		0.1.wait;
+	}.loop
+}.play;
+
+//test signals, all in one synth
+~synth = {
+	arg freq=220, type = 0, noise = 0;
+	var noise_sig = PinkNoise.ar(noise);
+	var tone = Select.ar(type,[
+		SinOsc.ar(freq,mul:0.1),
+		LFTri.ar(freq,mul:0.1),
+		Saw.ar(freq,0.1),
+		Pulse.ar(freq,mul:0.1),
+		Mix.new(Array.fill(8, {arg i; SinOsc.ar(LFNoise1.kr(0.1.rand,10,220*(i+1)),mul:(i+1).reciprocal * 0.1)}))
+	]);
+	var source = tone + noise_sig;
+	Out.kr(~bus, FluidPitch.kr(source) ++ Pitch.kr(source));
+	source.dup;
+}.play;
+)
+
+// Pitch.kr is slightly better on pure sine waves
+~synth.set(\freq, 440)
+
+// adding harmonics, by changing to triangle (1), saw (2) or square (3) shows that these algorithms are more resilient when the signal is richer
+~synth.set(\type,1) // tri
+~synth.set(\type,2) // saw
+~synth.set(\type,3) // square
+~synth.set(\type,4) // band of sine waves
+
+// adding noise shows that the algorithm is robust to some noise
+~synth.set(\noise, 0.2)
+::

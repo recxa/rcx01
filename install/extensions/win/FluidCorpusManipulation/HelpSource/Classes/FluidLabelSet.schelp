@@ -1,0 +1,436 @@
+TITLE:: FluidLabelSet
+SUMMARY:: A set of labels associated with identifiers.
+CATEGORIES:: Libraries>FluidCorpusManipulation
+RELATED:: Classes/FluidDataSet,Classes/FluidDataSetQuery,Classes/FluidKMeans,Classes/Dictionary
+DESCRIPTION::
+
+    
+    FluidLabelSet is a container associating identifiers with labels.
+
+
+    
+
+Read more about FluidLabelSet on the link::https://learn.flucoma.org/reference/labelset##learn platform::.
+
+CLASSMETHODS::
+
+METHOD:: new
+
+ARGUMENT:: server 
+
+  The LINK::Classes/Server:: on which to construct this object
+ 
+ 
+
+INSTANCEMETHODS::
+ 
+ METHOD:: addLabel
+
+      
+    Add a label to the FluidLabelSet.
+
+
+ARGUMENT:: identifier
+
+    
+    The identifier for this label.
+
+
+ARGUMENT:: label
+
+    
+    The label to add.
+
+
+ 
+ARGUMENT:: action 
+
+  A function to execute when the server has completed running addLabel
+
+METHOD:: getLabel
+
+      
+    Retrieve the label associated with an identifier. Will report an error if the identifier is not present in the set.
+
+
+ARGUMENT:: identifier
+
+    
+    The identifier for the label to be retrieved.
+
+
+ 
+ARGUMENT:: action 
+
+  A function to execute when the server has completed running getLabel
+
+METHOD:: deleteLabel
+
+      
+    Delete a label given a certain identifier.
+
+
+ARGUMENT:: identifier
+
+    
+    The identifier to be deleted.
+
+
+ 
+ARGUMENT:: action 
+
+  A function to execute when the server has completed running deleteLabel
+
+METHOD:: updateLabel
+
+      
+    Update a label for a given identifier in the label set.
+
+
+ARGUMENT:: identifier
+
+    
+    The identifier for this label.
+
+
+ARGUMENT:: label
+
+    
+    The label to update.
+
+
+ 
+ARGUMENT:: action 
+
+  A function to execute when the server has completed running updateLabel
+
+METHOD:: setLabel
+
+      
+    Set a label for a given identifier.
+
+
+ARGUMENT:: identifier
+
+    
+    The identifier for this label.
+
+
+ARGUMENT:: label
+
+    
+    The label to update.
+
+
+ 
+ARGUMENT:: action 
+
+  A function to execute when the server has completed running setLabel
+
+METHOD:: merge
+
+      
+    Merge sourceLabelSet in the current LabelSet. It will replace the label with the same identifier if overwrite is set to 1.
+
+
+ARGUMENT:: sourceLabelSet
+
+    
+    The source LabelSet to be merged.
+
+
+ARGUMENT:: overwrite
+
+    
+    A flag to allow overwrite labels with the same identifier.
+
+
+ 
+ARGUMENT:: action 
+
+  A function to execute when the server has completed running merge
+
+METHOD:: dump
+
+      
+    Dump the state of this object as a Dictionary.
+
+
+ 
+ARGUMENT:: action 
+
+  A function to execute when the server has completed running dump
+
+METHOD:: load
+
+      
+    Replace the internal state of the object from a LINK::Classes/Dictionary::.
+
+
+ARGUMENT:: dict
+
+    
+
+ 
+ARGUMENT:: action 
+
+  A function to execute when the server has completed running load
+
+METHOD:: print
+
+      
+    Post an abbreviated content of the label set in the window by default, but you can supply a custom action instead.
+
+
+ 
+ARGUMENT:: action 
+
+  A function to execute when the server has completed running print
+
+METHOD:: size
+
+      
+    The number of data points (entries / observations) in this model or dataset / labeset
+
+
+ 
+ARGUMENT:: action 
+
+  A function to execute when the server has completed running size
+
+METHOD:: cols
+
+      
+    The number of columns (dimensions) in this model or dataset / labeset
+
+
+ 
+ARGUMENT:: action 
+
+  A function to execute when the server has completed running cols
+
+METHOD:: clear
+
+      
+    Empty the label set and reset to a clean state.
+
+
+ 
+ARGUMENT:: action 
+
+  A function to execute when the server has completed running clear
+
+METHOD:: write
+
+      
+    Save the contents of the object to a JSON file on disk.
+
+
+ARGUMENT:: filename
+
+    
+    Path of the file to load from
+
+
+ 
+ARGUMENT:: action 
+
+  A function to execute when the server has completed running write
+
+METHOD:: read
+
+      
+    Replace the internal state of the object from a JSON file on disk.
+
+
+ARGUMENT:: filename
+
+    
+    Path of the file to load from
+
+
+ 
+ARGUMENT:: action 
+
+  A function to execute when the server has completed running read
+
+METHOD:: getIds
+
+      
+    Export the LabelSet identifier to a FluidLabelSet.
+
+
+ARGUMENT:: labelSet
+
+    
+    The FluidLabelSet to export to. Its content will be replaced.
+
+
+ 
+ARGUMENT:: action 
+
+  A function to execute when the server has completed running getIds
+
+ 
+EXAMPLES::
+code::
+
+(
+~ls = FluidLabelSet.new(s);
+~ls.addLabel("perth","hot");
+~ls.addLabel("huddersfield","cold");
+~ls.print;
+)
+
+(
+// set label will add if it doesn't exist
+~ls.setLabel("chicago","cold");
+// or update if it does
+~ls.setLabel("huddersfield","hot");
+~ls.print;
+)
+
+(
+// update label will update an existing label
+~ls.updateLabel("perth","dry-heat");
+~ls.updateLabel("huddersfield","wet-winter");
+~ls.updateLabel("chicago","polar-vortex");
+~ls.print;
+)
+
+// delete label will, ahem, delete a label
+(
+~ls.deleteLabel("huddersfield");
+~ls.print;
+)
+
+(
+// dump gives a dictionary
+~ls.dump({
+	arg dict;
+	dict.keysValuesDo{
+		arg k, v;
+		"%:\t%".format(k,v).postln;
+	};
+});
+)
+::
+strong::Labeling Audio Analyses::
+code::
+
+(
+~src = Buffer.read(s,FluidFilesPath("Tremblay-ASWINE-ScratchySynth-M.wav"));
+~ds = FluidDataSet(s);
+~ls = FluidLabelSet(s);
+)
+
+// find the average mfcc values across this sound file and add to the dataset
+// at the same time, add a label to the label set with the same identifier
+(
+var id = "ASWINE";
+var mfccs = Buffer(s);
+var stats = Buffer(s);
+var flat = Buffer(s);
+~ls.addLabel(id,"noisy");
+FluidBufMFCC.processBlocking(s,~src,features:mfccs,startCoeff:1);
+FluidBufStats.processBlocking(s,mfccs,stats:stats,select:[\mean]);
+FluidBufFlatten.processBlocking(s,stats,destination:flat);
+~ds.addPoint(id,flat);
+~ds.print;
+~ls.print;
+)
+
+::
+strong::Other Messages::
+code::
+
+// do some analyses and get them all to a label set and data set
+(
+~srcA = Buffer.read(s,FluidFilesPath("Tremblay-AaS-SynthTwoVoices-M.wav"));
+~srcB = Buffer.readChannel(s,FluidFilesPath("Tremblay-CF-ChurchBells.wav"),channels:[0]);
+)
+
+(
+fork{
+	var labels = ["synth","bells"];
+	var mfccs = Buffer(s);
+	var flat = Buffer(s);
+	var counter = 0;
+
+	~ds = FluidDataSet(s);
+	~ls = FluidLabelSet(s);
+
+	[~srcA,~srcB].do{
+		arg buf, i;
+		FluidBufMFCC.processBlocking(s,buf,features:mfccs,startCoeff:1);
+		s.sync;
+		mfccs.numFrames.do{
+			arg frame;
+			var id = "mfcc-analysis-%".format(counter.asInteger);
+			FluidBufFlatten.processBlocking(s,mfccs,frame,1,destination:flat);
+			~ds.addPoint(id,flat);
+			~ls.addLabel(id,labels[i]);
+			counter = counter + 1;
+		};
+	};
+
+	~ds.print;
+	~ls.print;
+}
+)
+
+// save to disk
+~ls.write(Platform.defaultTempDir+/+"mfcc-analysis-labels.json");
+
+// read from disk
+FluidLabelSet(s).read(Platform.defaultTempDir+/+"mfcc-analysis-labels.json").print;
+
+// how many lables are there
+~ls.size
+
+// clear
+(
+~ls.clear;
+~ls.print;
+)
+::
+link::Classes/Dictionary:: strong::interface::
+code::
+
+(
+FluidLabelSet(s).load(
+	Dictionary.newFrom([
+		"cols",1,
+		"data",Dictionary.newFrom([
+			"violin","string",
+			"viola","string",
+			"trumpet","brass",
+			"trombone","brass",
+			"clarinet","wind"
+		])
+	])
+).print;
+)
+
+::
+
+strong::Merging::
+code::
+
+a = Dictionary.newFrom([\cols, 1, \data, Dictionary.newFrom([\one, \un,\two,\deux])]);
+b = FluidLabelSet(s)
+b.load(a)
+b.print
+
+a = Dictionary.newFrom([\cols, 1, \data, Dictionary.newFrom([\three, \trois, \two,\zwei])]);
+c = FluidLabelSet(s)
+c.load(a)
+c.print
+
+b.merge(c)
+b.print //common items not replaced
+
+b.merge(c,1)
+b.print //now they are
+
+::

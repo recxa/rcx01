@@ -1,0 +1,177 @@
+TITLE:: FluidOnsetFeature
+SUMMARY:: Realtime Spectral Difference Feature
+CATEGORIES:: Libraries>FluidCorpusManipulation
+RELATED:: Classes/FluidOnsetSlice,Classes/FluidNoveltyFeature,Classes/FluidAmpFeature,Guides/FluidCorpusManipulation
+DESCRIPTION::
+
+    
+    Calculate the spectral difference feature used by LINK::Classes/FluidOnsetSlice::.
+
+
+    
+    Calculates the feature used by LINK::Classes/FluidOnsetSlice:: for slicing in realtime.
+
+    The metric for calculating difference can be chosen from a curated selection, lending the algorithm toward slicing a broad range of musical materials.
+
+    The argument for CODE::metric:: can be passed as an integer (see table below) which is modulatable, or as one of the following symbols: CODE::\power::, CODE::\hfc::, CODE::\flux::,      CODE::\mkl::, CODE::\is::, CODE::\cosine::, CODE::\phase::, CODE::\wphase::, CODE::\complex::, or CODE::\rcomplex::.
+
+
+Read more about FluidOnsetFeature on the link::https://learn.flucoma.org/reference/onsetfeature##learn platform::.
+
+CLASSMETHODS::
+
+METHOD:: kr
+
+ARGUMENT:: in
+
+  Audio-rate signal to analyze
+
+
+
+
+
+
+
+
+ARGUMENT:: metric
+
+    
+    The metric used to derive a difference curve between spectral frames. It can be any of the following:
+
+
+table::## 0 || 
+STRONG::Energy:: thresholds on (sum of squares of magnitudes / nBins) (like Onsets power)
+## 1 || 
+STRONG::HFC:: thresholds on (sum of (squared magnitudes * binNum) / nBins)
+## 2 || 
+STRONG::SpectralFlux:: thresholds on (difference in magnitude between consecutive frames, half rectified)
+## 3 || 
+STRONG::MKL:: thresholds on (sum of log of magnitude ratio per bin) (or equivalently, sum of difference of the log magnitude per bin) (like Onsets mkl)
+## 4 || 
+STRONG::IS:: Itakura-Saito divergence (see literature)
+## 5 || 
+STRONG::Cosine:: thresholds on (cosine distance between comparison frames)
+## 6 || 
+STRONG::PhaseDev:: takes the past 2 frames, projects to the current, as anticipated if it was a steady state, then compute the sum of the differences, on which it thresholds (like Onsets phase)
+## 7 || 
+STRONG::WPhaseDev:: same as PhaseDev, but weighted by the magnitude in order to remove chaos noise floor (like Onsets wphase)
+## 8 || 
+STRONG::ComplexDev:: same as PhaseDev, but in the complex domain - the anticipated amp is considered steady, and the phase is projected, then a complex subtraction  is done with the actual present frame. The sum of magnitudes is used to threshold (like Onsets complex)
+## 9 || 
+STRONG::RComplexDev:: same as above, but rectified (like Onsets rcomplex)
+::
+ARGUMENT:: filterSize
+
+    
+    The size (in hops) of a smoothing filter that is applied on the novelty curve. A larger filter size allows for cleaner cuts on very sharp changes.
+
+    STRONG::Constraints::
+
+    LIST::
+    ## 
+    Minimum: CODE::1::
+
+    ## 
+    Maximum: CODE::101::
+
+    ## 
+    Snaps to odd numbers
+
+    ::
+
+
+ARGUMENT:: frameDelta
+
+    
+    For certain metrics (HFC, SpectralFlux, MKL, Cosine), the distance does not have to be computed between consecutive frames. By default (0) it is, otherwise this sets the distance between the comparison window in samples.
+
+    STRONG::Constraints::
+
+    LIST::
+    ## 
+    Minimum: CODE::0::
+
+    ## 
+    Maximum: CODE::8192::
+
+    ::
+
+
+ARGUMENT:: windowSize
+
+    
+    The window size. As spectral differencing relies on spectral frames, we need to decide what precision we give it spectrally and temporally. For more information visit LINK::https://learn.flucoma.org/learn/fourier-transform/::
+
+
+
+ARGUMENT:: hopSize
+
+    
+    The window hop size. As spectral differencing relies on spectral frames, we need to move the window forward. It can be any size, but low overlap will create audible artefacts. The -1 default value will default to half of windowSize (overlap of 2).
+
+
+
+ARGUMENT:: fftSize
+
+    
+    The inner FFT/IFFT size. It should be at least 4 samples long, at least the size of the window, and a power of 2. Making it larger allows an oversampling of the spectral precision. The -1 default value will default to windowSize.
+
+
+
+ARGUMENT:: maxFFTSize
+
+    
+    Set an explicit upper bound on the FFT size at object instantiation. The default of CODE::nil:: or -1 sets this to whatever the initial FFT size is
+
+
+
+ 
+ 
+
+RETURNS::     
+    A KR signal of the feature.
+
+
+
+INSTANCEMETHODS::
+  
+EXAMPLES::
+code::
+~src = Buffer.readChannel(s,FluidFilesPath("Tremblay-SA-UprightPianoPedalWide.wav"),channels:[0]);
+
+(
+{
+	var sig = PlayBuf.ar(~src.numChannels,~src,BufRateScale.ir(~src),loop:1);
+	var feature = FluidOnsetFeature.kr(sig,9,filterSize:5,windowSize:512);
+	SendReply.kr(Impulse.kr(30),"/feature",feature);
+	sig.dup;
+}.play;
+
+OSCdef(\feature,{
+	arg msg;
+	{"*".post} ! (msg[3] * 1000).abs;
+	"".postln;
+},"/feature");
+)
+
+::
+strong::Make your own threshold and Schmidt Trigger::
+code::
+
+~src = Buffer.readChannel(s,FluidFilesPath("Tremblay-SA-UprightPianoPedalWide.wav"),channels:[0]);
+
+(
+{
+	var sig = PlayBuf.ar(~src.numChannels,~src,BufRateScale.ir(~src),loop:1);
+	var feature = FluidOnsetFeature.kr(sig,9);
+	var trig = Schmidt.kr(feature,0.01,0.1);
+	SendReply.kr(trig,"/onset");
+	sig;
+}.play;
+
+OSCdef(\onset,{
+	arg msg;
+	"onset".postln;
+},"/onset");
+)
+::

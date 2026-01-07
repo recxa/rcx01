@@ -1,0 +1,197 @@
+TITLE:: FluidOnsetSlice
+SUMMARY:: Spectral Difference-Based Realtime Audio Slicer
+CATEGORIES:: Libraries>FluidCorpusManipulation
+RELATED:: Classes/FluidBufOnsetSlice,Classes/FluidAmpSlice,Classes/FluidNoveltySlice,Classes/FluidTransientSlice,Guides/FluidCorpusManipulation,Classes/Onsets
+DESCRIPTION::
+
+    
+    Implements a selection of spectrum-based onset slicers
+
+
+    
+    Performs segmentation based on the difference between spectral frames.
+
+    The metric for calculating difference can be chosen from a curated selection, lending the algorithm toward slicing a broad range of musical materials.
+
+    The argument for CODE::metric:: can be passed as an integer (see table below) which is modulatable, or as one of the following symbols: CODE::\power::, CODE::\hfc::, CODE::\flux::,      CODE::\mkl::, CODE::\is::, CODE::\cosine::, CODE::\phase::, CODE::\wphase::, CODE::\complex::, or CODE::\rcomplex::.
+
+
+Read more about FluidOnsetSlice on the link::https://learn.flucoma.org/reference/onsetslice##learn platform::.
+
+CLASSMETHODS::
+
+METHOD:: ar
+
+ARGUMENT:: in 
+
+  Audio-rate signal to slice
+
+
+
+
+
+
+
+
+ARGUMENT:: metric
+
+    
+    The metric used to derive a difference curve between spectral frames. It can be any of the following:
+
+
+table::## 0 || 
+STRONG::Energy:: thresholds on (sum of squares of magnitudes / nBins) (like Onsets power)
+## 1 || 
+STRONG::HFC:: thresholds on (sum of (squared magnitudes * binNum) / nBins)
+## 2 || 
+STRONG::SpectralFlux:: thresholds on (difference in magnitude between consecutive frames, half rectified)
+## 3 || 
+STRONG::MKL:: thresholds on (sum of log of magnitude ratio per bin) (or equivalently, sum of difference of the log magnitude per bin) (like Onsets mkl)
+## 4 || 
+STRONG::IS:: Itakura-Saito divergence (see literature)
+## 5 || 
+STRONG::Cosine:: thresholds on (cosine distance between comparison frames)
+## 6 || 
+STRONG::PhaseDev:: takes the past 2 frames, projects to the current, as anticipated if it was a steady state, then compute the sum of the differences, on which it thresholds (like Onsets phase)
+## 7 || 
+STRONG::WPhaseDev:: same as PhaseDev, but weighted by the magnitude in order to remove chaos noise floor (like Onsets wphase)
+## 8 || 
+STRONG::ComplexDev:: same as PhaseDev, but in the complex domain - the anticipated amp is considered steady, and the phase is projected, then a complex subtraction  is done with the actual present frame. The sum of magnitudes is used to threshold (like Onsets complex)
+## 9 || 
+STRONG::RComplexDev:: same as above, but rectified (like Onsets rcomplex)
+::
+ARGUMENT:: threshold
+
+    
+    The thresholding of a new slice. Value ranges are different for each metric, from 0 upwards.
+
+    STRONG::Constraints::
+
+    LIST::
+    ## 
+    Minimum: CODE::0::
+
+    ::
+
+
+ARGUMENT:: minSliceLength
+
+    
+    The minimum duration of a slice in number of hopSize.
+
+    STRONG::Constraints::
+
+    LIST::
+    ## 
+    Minimum: CODE::0::
+
+    ::
+
+
+ARGUMENT:: filterSize
+
+    
+    The size (in hops) of a smoothing filter that is applied on the novelty curve. A larger filter size allows for cleaner cuts on very sharp changes.
+
+    STRONG::Constraints::
+
+    LIST::
+    ## 
+    Minimum: CODE::1::
+
+    ## 
+    Maximum: CODE::101::
+
+    ## 
+    Snaps to odd numbers
+
+    ::
+
+
+ARGUMENT:: frameDelta
+
+    
+    For certain metrics (HFC, SpectralFlux, MKL, Cosine), the distance does not have to be computed between consecutive frames. By default (0) it is, otherwise this sets the distance between the comparison window in samples.
+
+    STRONG::Constraints::
+
+    LIST::
+    ## 
+    Minimum: CODE::0::
+
+    ## 
+    Maximum: CODE::8192::
+
+    ::
+
+
+ARGUMENT:: windowSize
+
+    
+    The window size. As sinusoidal estimation relies on spectral frames, we need to decide what precision we give it spectrally and temporally. For more information visit LINK::https://learn.flucoma.org/learn/fourier-transform/::
+
+
+
+ARGUMENT:: hopSize
+
+    
+    The window hop size. As sinusoidal estimation relies on spectral frames, we need to move the window forward. It can be any size, but low overlap will create audible artefacts. The -1 default value will default to half of windowSize (overlap of 2).
+
+
+
+ARGUMENT:: fftSize
+
+    
+    The inner FFT/IFFT size. It should be at least 4 samples long, at least the size of the window, and a power of 2. Making it larger allows an oversampling of the spectral precision. The -1 default value will default to windowSize.
+
+
+
+ARGUMENT:: maxFFTSize
+
+    
+    Set an explicit upper bound on the FFT size at object instantiation. The default of CODE::nil:: or -1 sets this to whatever the initial FFT size is
+
+
+
+ 
+ 
+
+INSTANCEMETHODS::
+  
+EXAMPLES::
+
+code::
+
+~src = Buffer.read(s,FluidFilesPath("Nicol-LoopE-M.wav"));
+
+(
+{
+	var sig = PlayBuf.ar(1,~src,BufRateScale.ir(~src),loop:1);
+	var onsets = FluidOnsetSlice.ar(sig);
+	sig = DelayN.ar(sig, 1, 1024 * SampleDur.ir); // compensate for a latency of windowSize samples
+	[sig,onsets];
+}.play
+)
+
+// other parameters
+(
+{
+	var sig = PlayBuf.ar(1,~src,BufRateScale.ir(~src),loop:1);
+	var onsets = FluidOnsetSlice.ar(sig,metric:9,threshold:0.15,minSliceLength:45,filterSize:9,frameDelta:0,windowSize:128,hopSize:64);
+	sig = DelayN.ar(sig, 1, 128 * SampleDur.ir);
+	[sig, onsets]
+}.play
+)
+
+// More musical, onset-trigged autopan
+(
+{
+    var sig, trig, pan;
+	sig = PlayBuf.ar(1,~src,BufRateScale.ir(~src),loop:1);
+    trig = FluidOnsetSlice.ar(sig,metric:7,threshold:0.2,minSliceLength:100,filterSize:9,frameDelta:0,windowSize:128);
+	sig = DelayN.ar(sig, 1, 128 * SampleDur.ir); //one could add a bit more delay here to make sure to catch the attack
+	pan = Stepper.ar(trig,-1,-1,1,1);
+    Pan2.ar(sig,pan);
+}.play
+)
+::

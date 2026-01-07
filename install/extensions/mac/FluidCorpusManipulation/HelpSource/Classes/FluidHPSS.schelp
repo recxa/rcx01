@@ -1,0 +1,336 @@
+TITLE:: FluidHPSS
+SUMMARY:: Harmonic-Percussive Source Separation Using Median Filtering
+CATEGORIES:: Libraries>FluidCorpusManipulation
+RELATED:: Classes/FluidBufHPSS,Classes/FluidSines,Classes/FluidTransients,Guides/FluidCorpusManipulation
+DESCRIPTION::
+
+    
+    Harmonic-Percussive Source Separation (HPSS) on an audio input.
+
+
+    
+    DEFINITIONLIST::
+    ## HPSS takes in audio and divides it into two or three outputs, depending on the CODE::maskingMode:::
+    || 
+    LIST::
+    ## 
+    an harmonic component
+
+    ## 
+    a percussive component
+
+    ## 
+    a residual of the previous two if CODE::maskingMode:: is set to 2.
+
+    ::
+    ::
+    HPSS works by using median filters on the magnitudes of a spectrogram. It makes certain assumptions about what it is looking for in a sound: that in a spectrogram “percussive” elements tend to form vertical “ridges” (tall in frequency band, narrow in time), while stable “harmonic” elements tend to form horizontal “ridges” (narrow in frequency band, long in time). By using median filters across time and frequency respectively, we get initial estimates of the "harmonic-ness" and "percussive-ness" for every spectral bin of every spectral frame in the spectrogram. These are then combined into 'masks' that are applied to the original spectrogram in order to produce a harmonic and percussive output (and residual if CODE::maskingMode:: = 2).
+
+    The maskingMode parameter provides different approaches to combining estimates and producing masks. Some settings (especially in modes 1 & 2) will provide better separation but with more artefacts.
+
+    Driedger (2014) suggests that the size of the median filters don't affect the outcome as much as the CODE::fftSize::. With large FFT sizes, short percussive sounds have less representation, therefore the harmonic component is more strongly represented. The result is that many of the percussive sounds leak into the harmonic component. Small FFT sizes have less resolution in the frequency domain and often lead to a blurring of horizontal structures, therefore harmonic sounds tend to leak into the percussive component. As with all FFT based-processes, finding an FFT size that balances spectral and temporal resolution for a given source sound will benefit the use of this object.
+
+    For more details visit LINK::https://learn.flucoma.org/reference/hpss::
+
+    Fitzgerald, Derry. 2010. ‘Harmonic/Percussive Separation Using Median Filtering’. (In Proceedings DaFx 10. LINK::https://arrow.dit.ie/argcon/67::.)
+
+    Driedger, Jonathan, Meinard Müller, and Sascha Disch. 2014. ‘Extending Harmonic-Percussive Separation of Audio Signals’. (In Proc. ISMIR. LINK::http://www.terasoft.com.tw/conf/ismir2014/proceedings/T110_127_Paper.pdf::.)
+
+
+Read more about FluidHPSS on the link::https://learn.flucoma.org/reference/hpss##learn platform::.
+
+CLASSMETHODS::
+
+METHOD:: ar
+
+ARGUMENT:: in
+The audio to be processed.
+
+
+
+
+
+
+
+
+ARGUMENT:: harmFilterSize
+
+    
+    The size, in spectral frames, of the median filter for the harmonic component. Must be an odd number, >= 3.
+
+    STRONG::Constraints::
+
+    LIST::
+    ## 
+    Minimum: CODE::3::
+
+    ## 
+    Maximum: CODE::maxharmFilterSize::
+
+    ## 
+    Snaps to odd numbers
+
+    ::
+
+
+ARGUMENT:: percFilterSize
+
+    
+    The size, in spectral bins, of the median filter for the percussive component. Must be an odd number, >=3
+
+    STRONG::Constraints::
+
+    LIST::
+    ## 
+    Minimum: CODE::3::
+
+    ## 
+    Maximum: CODE::maxpercFilterSize::
+
+    ## 
+    Snaps to odd numbers
+
+    ::
+
+
+ARGUMENT:: maskingMode
+
+    
+    The way the masking is applied to the original spectrogram. (0,1,2)
+
+
+table::## 0 || 
+Soft masks provide the fewest artefacts, but the weakest separation. Complimentary, soft masks are made for the harmonic and percussive parts by allocating some fraction of every magnitude in the spectrogram to each mask. The two resulting buffers will sum to exactly the original material. This mode uses soft mask in Fitzgerald's (2010) original method of 'Wiener-inspired' filtering.
+## 1 || 
+Binary masks provide better separation, but with more artefacts. The harmonic mask is constructed using a binary decision, based on whether a threshold is exceeded for every magnitude in the spectrogram (these are set using CODE::harmThreshFreq1::, CODE::harmThreshAmp1::, CODE::harmThreshFreq2::, CODE::harmThreshAmp2::, see below). The percussive mask is then formed as the inverse of the harmonic one, meaning that as above, the two components will sum to the original sound.
+## 2 || 
+Soft masks (with a third stream containing a residual component). First, binary masks are made separately for the harmonic and percussive components using different thresholds (set with the respective CODE::harmThresh-:: and CODE::percThresh-:: parameters below). Because these masks aren't guaranteed to represent the entire spectrogram, any residual energy is considered as a third output.  The independently created binary masks are converted to soft masks at the end of the process so that everything null-sums.
+::
+ARGUMENT:: harmThreshFreq1
+
+    
+    In modes 1 and 2, the frequency of the low part of the threshold for the harmonic filter (0-1)
+
+
+
+ARGUMENT:: harmThreshAmp1
+
+    
+    In modes 1 and 2, the threshold of the low part for the harmonic filter. That threshold applies to all frequencies up to harmThreshFreq1: how much more powerful (in dB) the harmonic median filter needs to be than the percussive median filter for this bin to be counted as harmonic.
+
+
+
+ARGUMENT:: harmThreshFreq2
+
+    
+    In modes 1 and 2, the frequency of the hight part of the threshold for the harmonic filter. (0-1)
+
+
+
+ARGUMENT:: harmThreshAmp2
+
+    
+    In modes 1 and 2, the threshold of the high part for the harmonic filter. That threshold applies to all frequencies above harmThreshFreq2. The threshold between harmThreshFreq1 and harmThreshFreq2 is interpolated between harmThreshAmp1 and harmThreshAmp2. How much more powerful (in dB) the harmonic median filter needs to be than the percussive median filter for this bin to be counted as harmonic.
+
+
+
+ARGUMENT:: percThreshFreq1
+
+    
+    In mode 2, the frequency of the low part of the threshold for the percussive filter. (0-1)
+
+
+
+ARGUMENT:: percThreshAmp1
+
+    
+    In mode 2, the threshold of the low part for the percussive filter. That threshold applies to all frequencies up to percThreshFreq1. How much more powerful (in dB) the percussive median filter needs to be than the harmonic median filter for this bin to be counted as percussive.
+
+
+
+ARGUMENT:: percThreshFreq2
+
+    
+    In mode 2, the frequency of the hight part of the threshold for the percussive filter. (0-1)
+
+
+
+ARGUMENT:: percThreshAmp2
+
+    
+    In mode 2, the threshold of the high part for the percussive filter. That threshold applies to all frequencies above percThreshFreq2. The threshold between percThreshFreq1 and percThreshFreq2 is interpolated between percThreshAmp1 and percThreshAmp2. How much more powerful (in dB) the percussive median filter needs to be than the harmonic median filter for this bin to be counted as percussive.
+
+
+
+ARGUMENT:: windowSize
+
+    
+    The window size. As sinusoidal estimation relies on spectral frames, we need to decide what precision we give it spectrally and temporally. For more information visit LINK::https://learn.flucoma.org/learn/fourier-transform/::
+
+
+
+ARGUMENT:: hopSize
+
+    
+    The window hop size. As sinusoidal estimation relies on spectral frames, we need to move the window forward. It can be any size, but low overlap will create audible artefacts. The -1 default value will default to half of windowSize (overlap of 2).
+
+
+
+ARGUMENT:: fftSize
+
+    
+    The inner FFT/IFFT size. It should be at least 4 samples long, at least the size of the window, and a power of 2. Making it larger allows an oversampling of the spectral precision. The -1 default value will default to windowSize.
+
+
+
+ARGUMENT:: maxFFTSize
+
+    
+    Set an explicit upper bound on the FFT size at object instantiation. The default of CODE::nil:: or -1 sets this to whatever the initial FFT size is
+
+
+
+ARGUMENT:: maxHarmFilterSize
+
+    
+    Manually sets a maximum value for CODE::harmFilterSize::. Can only be set at object instantiation. Default value of -1 sets this to the initial value of CODE::harmFilterSize::
+
+
+
+ARGUMENT:: maxPercFilterSize
+
+    
+    Manually sets a maximum value for CODE::percFilterSize::. Can only be set at object instantiation. Default value of -1 sets this to the initial value of CODE::percFilterSize::
+
+
+
+ 
+ 
+
+INSTANCEMETHODS::
+  
+EXAMPLES::
+
+CODE::
+
+b = Buffer.readChannel(s,FluidFilesPath("Tremblay-ASWINE-ScratchySynth-M.wav"),channels:[0]);
+
+// hear original
+b.play;
+
+// process the "harmonic" part separately from the "percussive" part
+(
+y = {
+	arg which = 1;
+	var src = PlayBuf.ar(1,b,BufRateScale.kr(b),loop:1);
+	var harm, perc, residual;
+
+	// FluidHPSS will always output a resdiual stream, but if using maskingMode 0 or 1, the residual will be silent.
+	# harm, perc, residual = FluidHPSS.ar(src,37,11,maskingMode:1);
+	harm = PitchShift.ar(harm,pitchRatio:LFDNoise0.kr(1).midiratio);
+	harm = Pan2.ar(harm,SinOsc.kr(0.3));
+	harm = FreeVerb2.ar(harm[0],harm[1],0.9,0.9,0.1);
+	harm + Pan2.ar((PitchShift.ar(perc,pitchRatio:0.2) * 10).softclip * 0.3,LFDNoise0.kr(1));
+}.play;
+)
+
+// try it with some straight ahead drums:
+b = Buffer.read(s,FluidFilesPath("Nicol-LoopE-M.wav"));
+
+// hear original
+b.play;
+
+(
+fork{
+
+	2.do{
+		arg i;
+
+		["Percussive Component Only","Harmonic Component Only"][i].postln;
+
+		y = {
+			var src = PlayBuf.ar(1,b,BufRateScale.kr(b));
+			FluidHPSS.ar(src,17,31,maskingMode:0)[1-i].dup;
+		}.play;
+
+		b.duration.wait;
+		1.wait;
+	}
+}
+)
+
+::
+
+STRONG::Masking Modes::
+
+CODE::
+
+//load a soundfile to play
+~buf = Buffer.readChannel(s,FluidFilesPath("Tremblay-BeatRemember.wav"),channels:[0]);
+
+// ==================== masking mode = 0: soft mask =======================
+// masking mode 0 uses a soft mask to separate the two components
+// fewer artefacts, more bleed
+(
+y = {
+	arg which = 0;
+	var src = PlayBuf.ar(1,~buf,BufRateScale.kr(~buf),loop:1);
+	var harm, perc;
+	# harm, perc = FluidHPSS.ar(src,17,31,maskingMode:0);
+	Select.ar(which,[src,harm,perc]).dup;
+}.play;
+)
+
+y.set(\which,1); // just harm
+y.set(\which,2); // just perc
+y.set(\which,0); // original;
+
+
+// ==================== masking mode = 1: binary mask =======================
+// masking mode 1 uses a binary mask to separate the two components
+// more separation, more artefacts
+(
+y = {
+	arg which = 0;
+	var src = PlayBuf.ar(1,~buf,BufRateScale.kr(~buf),loop:1);
+	var harm, perc;
+	# harm, perc = FluidHPSS.ar(src,17,31,maskingMode:1);
+	Select.ar(which,[src,harm,perc]).dup;
+}.play;
+)
+
+y.set(\which,1); // just harm
+y.set(\which,2); // just perc
+y.set(\which,0); // original;
+
+// ============ masking mode = 2: soft mask (with residual) ===============
+// masking mode 2 uses a soft mask to separate the two components
+// and also outputs a residual
+(
+y = {
+	arg which = 0;
+	var src = PlayBuf.ar(1,~buf,BufRateScale.kr(~buf),loop:1);
+	var harm, perc, residual;
+	# harm, perc, residual = FluidHPSS.ar(src,17,31,maskingMode:2);
+	Select.ar(which,[src,harm,perc,residual]).dup;
+}.play;
+)
+
+y.set(\which,1); // just harm
+y.set(\which,2); // just perc
+y.set(\which,3); // just residual
+y.set(\which,0); // original
+
+::
+
+STRONG::Latency and Null-Sum Test::
+
+CODE::
+
+~buf = Buffer.readChannel(s,FluidFilesPath("Tremblay-BeatRemember.wav"),channels:[0]);
+
+// add a latency to the processed signal of (((harmFilterSize - 1) * hopSize) + windowSize) samples
+// this should output silence (because the null-summing is working)!
+{var sig = PlayBuf.ar(1,~buf,loop:1); [FluidHPSS.ar(sig, 17, 31).sum - DelayN.ar(sig, 1, ((((17 - 1) *  512) + 1024) / s.sampleRate))]}.play
+
+::

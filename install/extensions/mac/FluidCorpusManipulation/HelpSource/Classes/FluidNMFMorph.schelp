@@ -1,0 +1,141 @@
+TITLE:: FluidNMFMorph
+SUMMARY:: Morph between sounds
+CATEGORIES:: Libraries>FluidCorpusManipulation
+RELATED:: Classes/FluidBufNMF,Classes/FluidBufNMFCross,Classes/FluidAudioTransport,Classes/FluidBufAudioTransport
+DESCRIPTION::
+
+    
+    Perform cross-synthesis using Nonnegative Matrix Factorization (NMF) and Optimal Transport (OT).
+
+
+    
+    The algorithm uses NMF analyses of the CODE::source:: and CODE::target:: sounds. It decomposes their material in to a selectable number of components, which are in turn represented by their EMPHASIS::bases:: (spectrum) and EMPHASIS::activations:: (temporal pattern of each component). CODE::NMFMorph:: provides the ability to interpolate between CODE::source:: and CODE::target:: bases using a technique called Optimal Transport, that provides richer results than a simple linear interpolation between spectral shapes. The resulting sound is built up using a buffer of temporal activations, then resynthesised using a phase estimate.
+
+
+Read more about FluidNMFMorph on the link::https://learn.flucoma.org/reference/nmfmorph##learn platform::.
+
+CLASSMETHODS::
+
+METHOD:: ar
+
+
+
+
+
+
+
+
+ARGUMENT:: source
+
+    
+    A LINK::Classes/Buffer:: with the spectral bases for the source sound (must be the same number of spectral bases as CODE::target::).
+
+
+
+ARGUMENT:: target
+
+    
+    A LINK::Classes/Buffer:: with the spectral bases for the target sound (must be the same number of spectral bases as CODE::source::).
+
+
+
+ARGUMENT:: activations
+
+    
+    A LINK::Classes/Buffer:: with the temporal activations for the target sound.
+
+
+
+ARGUMENT:: autoassign
+
+    
+    If set to CODE::1:: the algorithm will attempt to optimally match which NMF basis components from source and target best match each other, and will use this mapping as its basis for interpolation.
+
+
+
+ARGUMENT:: interpolation
+
+    
+    Set the relative contributions of CODE::source:: and CODE::target:: between 0 and 1.
+
+    STRONG::Constraints::
+
+    LIST::
+    ## 
+    Minimum: CODE::0.0::
+
+    ## 
+    Maximum: CODE::1.0::
+
+    ::
+
+
+ARGUMENT:: windowSize
+
+    
+    The analysis window size in samples. Needs to match that of the seeding NMF analyses
+
+
+
+ARGUMENT:: hopSize
+
+    
+    The analysis hop size in samples. Needs to match that of the seeding NMF analyses
+
+
+
+ARGUMENT:: fftSize
+
+    
+    The analysis FFT size in samples. Needs to match that of the seeding NMF analyses
+
+
+
+ARGUMENT:: maxFFTSize
+
+    
+    Set an explicit upper bound on the FFT size at object instantiation. The default of CODE::nil:: or -1 sets this to whatever the initial FFT size is
+
+
+
+ 
+ 
+
+INSTANCEMETHODS::
+  
+EXAMPLES::
+
+code::FluidNMFMorph:: relies on preexisting NMF analyses to generate variations between sounds. Produce these using link::Classes/FluidBufNMF::
+
+code::
+//read some audio
+(
+~src1 = Buffer.readChannel(s,FluidFilesPath("Nicol-LoopE-M.wav"),channels:[0]); //some drums
+~src2 = Buffer.readChannel(s,FluidFilesPath("Tremblay-SA-UprightPianoPedalWide.wav"),channels:[0]);//some piano
+
+~src1Bases = Buffer(s);
+~src2Bases = Buffer(s);
+~src1Activations = Buffer(s);
+~src2Activations = Buffer(s);
+)
+
+//nmf analyses -- must have the same number of components (wait for this to complete!)
+(
+FluidBufNMF.processBlocking(s,~src1,bases:~src1Bases,activations:~src1Activations,components:5, action:{"Analysed Source 1".postln});
+FluidBufNMF.processBlocking(s,~src2,bases:~src2Bases,activations:~src2Activations, components:5, action:{"Analysed Source 2".postln});
+)
+
+(
+~synth = { |source, target, activations, autoassign|
+	FluidNMFMorph.ar(source,target,activations,autoassign,MouseX.kr).dup * 80
+}.play(s,args:[\source,~src1Bases,\target,~src2Bases,\activations,~src1Activations,\autoassign,1]);
+)
+
+// Change the actvations
+// when changing the activations, one needs to change the 'autoassign' control to update the process
+~synth.set(\activations, ~src2Activations, \autoassign,0);
+
+// change autoassign back to 1 to hear the difference
+~synth.set(\autoassign,1);
+
+::

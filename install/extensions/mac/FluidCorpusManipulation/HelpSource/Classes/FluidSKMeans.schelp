@@ -1,0 +1,582 @@
+TITLE:: FluidSKMeans
+SUMMARY:: K-Means with Spherical Distances
+CATEGORIES:: Libraries>FluidCorpusManipulation
+RELATED:: Classes/FluidKMeans,Classes/FluidKNNClassifier,Classes/FluidMLPClassifier,Classes/FluidDataSet,Classes/FluidLabelSet
+DESCRIPTION::
+
+    
+    Uses K-means algorithm with cosine similarity to learn clusters and features from a LINK::Classes/FluidDataSet::.
+
+
+    
+    LINK::Classes/FluidSKMeans:: is an implementation of KMeans based on cosine distances instead of euclidean ones, measuring the angles between the normalised vectors.
+    One common application of spherical KMeans is to try and learn features directly from input data (via a LINK::Classes/FluidDataSet::) without supervision. See this reference for a more technical explanation: LINK::https://machinelearningcatalogue.com/algorithm/alg_spherical-k-means.html:: and LINK::https://www-cs.stanford.edu/~acoates/papers/coatesng_nntot2012.pdf:: for feature extractions.
+
+
+Read more about FluidSKMeans on the link::https://learn.flucoma.org/reference/skmeans##learn platform::.
+
+CLASSMETHODS::
+
+METHOD:: new
+
+ARGUMENT:: server 
+
+  The LINK::Classes/Server:: on which to construct this object
+ARGUMENT:: numClusters
+
+    
+    The number of clusters to partition data into.
+
+    STRONG::Constraints::
+
+    LIST::
+    ## 
+    Minimum: CODE::0::
+
+    ::
+
+
+ARGUMENT:: encodingThreshold
+
+    
+    The encoding threshold (aka the alpha parameter). When used for feature learning, this can be used to produce sparser output features by setting the least active output dimensions to 0.
+
+    STRONG::Constraints::
+
+    LIST::
+    ## 
+    Minimum: CODE::0::
+
+    ## 
+    Maximum: CODE::1::
+
+    ::
+
+
+ARGUMENT:: maxIter
+
+    
+    The maximum number of iterations the algorithm will use whilst fitting.
+
+    STRONG::Constraints::
+
+    LIST::
+    ## 
+    Minimum: CODE::1::
+
+    ::
+
+
+ 
+ 
+
+INSTANCEMETHODS::
+ 
+METHOD:: numClusters
+
+  Property for code::numClusters::. See CODE::new::
+
+METHOD:: encodingThreshold
+
+  Property for code::encodingThreshold::. See CODE::new::
+
+METHOD:: maxIter
+
+  Property for code::maxIter::. See CODE::new::
+
+ METHOD:: fit
+
+      
+    Identify CODE::numClusters:: clusters in a LINK::Classes/FluidDataSet::. It will optimise until no improvement is possible, or up to CODE::maxIter::, whichever comes first. Subsequent calls will continue training from the stopping point with the same conditions.
+
+
+ARGUMENT:: dataSet
+
+    
+    A LINK::Classes/FluidDataSet:: of data points.
+
+
+ 
+ARGUMENT:: action 
+
+  A function to execute when the server has completed running fit
+
+METHOD:: predict
+
+      
+    Given a trained object, return the cluster ID for each data point in a LINK::Classes/FluidDataSet:: to a LINK::Classes/FluidLabelSet::.
+
+
+ARGUMENT:: dataSet
+
+    
+    A LINK::Classes/FluidDataSet:: containing the data to predict.
+
+
+ARGUMENT:: labelSet
+
+    
+    A LINK::Classes/FluidLabelSet:: to retrieve the predicted clusters.
+
+
+ 
+ARGUMENT:: action 
+
+  A function to execute when the server has completed running predict
+
+METHOD:: encode
+
+      
+    Given a trained object, return for each item of a provided LINK::Classes/FluidDataSet:: its encoded activations to each cluster as an array, often referred to as the cluster-activation space.
+
+
+ARGUMENT:: srcDataSet
+
+    
+    A LINK::Classes/FluidDataSet:: containing the data to encode.
+
+
+ARGUMENT:: dstDataSet
+
+    
+    A LINK::Classes/FluidDataSet:: to contain the new cluster-activation space.
+
+
+ 
+ARGUMENT:: action 
+
+  A function to execute when the server has completed running encode
+
+METHOD:: predictPoint
+
+      
+    Given a trained object, return the cluster ID for a data point in a LINK::Classes/Buffer::
+
+
+ARGUMENT:: buffer
+
+    
+    A LINK::Classes/Buffer:: containing a data point.
+
+
+ 
+ARGUMENT:: action 
+
+  A function to execute when the server has completed running predictPoint
+
+METHOD:: encodePoint
+
+      
+    Given a trained object, return the encoded activation of the provided point to each cluster centroid. Both points are handled as LINK::Classes/Buffer::
+
+
+ARGUMENT:: sourceBuffer
+
+    
+    A LINK::Classes/Buffer:: containing a data point.
+
+
+ARGUMENT:: targetBuffer
+
+    
+    A LINK::Classes/Buffer:: to write in the activation to all the cluster centroids.
+
+
+ 
+ARGUMENT:: action 
+
+  A function to execute when the server has completed running encodePoint
+
+METHOD:: fitEncode
+
+      
+    Run CODE::fit:: and CODE::encode:: in a single pass: i.e. train the model on the incoming LINK::Classes/FluidDataSet:: and then return its encoded cluster-activation space in the destination LINK::Classes/FluidDataSet::
+
+
+ARGUMENT:: srcDataSet
+
+    
+    A LINK::Classes/FluidDataSet:: containing the data to fit and encode.
+
+
+ARGUMENT:: dstDataSet
+
+    
+    A LINK::Classes/FluidDataSet:: to contain the new cluster-activation space.
+
+
+ 
+ARGUMENT:: action 
+
+  A function to execute when the server has completed running fitEncode
+
+METHOD:: getMeans
+
+      
+    Given a trained object, retrieve the means (centroids) of each cluster as a LINK::Classes/FluidDataSet::
+
+
+ARGUMENT:: dataSet
+
+    
+    A LINK::Classes/FluidDataSet:: of clusters with a mean per column.
+
+
+ 
+ARGUMENT:: action 
+
+  A function to execute when the server has completed running getMeans
+
+METHOD:: setMeans
+
+      
+    Overwrites the means (centroids) of each cluster, and declares the object trained.
+
+
+ARGUMENT:: dataSet
+
+    
+    A LINK::Classes/FluidDataSet:: of clusters with a mean per column.
+
+
+ 
+ARGUMENT:: action 
+
+  A function to execute when the server has completed running setMeans
+
+METHOD:: fitPredict
+
+      
+    Run CODE::fit:: and CODE::predict:: in a single pass: i.e. train the model on the incoming LINK::Classes/FluidDataSet:: and then return the learned clustering to the passed LINK::Classes/FluidLabelSet::
+
+
+ARGUMENT:: dataSet
+
+    
+    A LINK::Classes/FluidDataSet:: containing the data to fit and predict.
+
+
+ARGUMENT:: labelSet
+
+    
+    A LINK::Classes/FluidLabelSet:: to retrieve the predicted clusters.
+
+
+ 
+ARGUMENT:: action 
+
+  A function to execute when the server has completed running fitPredict
+
+METHOD:: cols
+
+      
+    The number of columns (dimensions) in this model or dataset / labeset
+
+
+ 
+ARGUMENT:: action 
+
+  A function to execute when the server has completed running cols
+
+METHOD:: clear
+
+      
+    Reset the object status to not fitted and untrained.
+
+
+ 
+ARGUMENT:: action 
+
+  A function to execute when the server has completed running clear
+
+METHOD:: size
+
+      
+    The number of data points (entries / observations) in this model or dataset / labeset
+
+
+ 
+ARGUMENT:: action 
+
+  A function to execute when the server has completed running size
+
+METHOD:: load
+
+      
+    Replace the internal state of the object from a LINK::Classes/Dictionary::.
+
+
+ARGUMENT:: dict
+
+    
+
+ 
+ARGUMENT:: action 
+
+  A function to execute when the server has completed running load
+
+METHOD:: dump
+
+      
+    Dump the state of this object as a LINK::Classes/Dictionary::, which will be passed to the action function provided. This object must first be CODE::fit``ted before ``dump:: can be called.
+
+
+ 
+ARGUMENT:: action 
+
+  A function to execute when the server has completed running dump
+
+METHOD:: write
+
+      
+    Save the internal state of the object to a JSON file on disk. This object must first be CODE::fit:: before CODE::write:: can be called.
+
+
+ARGUMENT:: filename
+
+    
+    Path of the file to load from
+
+
+ 
+ARGUMENT:: action 
+
+  A function to execute when the server has completed running write
+
+METHOD:: read
+
+      
+    Replace the internal state of the object from a JSON file on disk.
+
+
+ARGUMENT:: filename
+
+    
+    Path of the file to load from
+
+
+ 
+ARGUMENT:: action 
+
+  A function to execute when the server has completed running read
+
+ 
+EXAMPLES::
+code::
+
+//Make some clumped 2D points and place into a DataSet
+(
+var points = 4.collect{
+	64.collect{(1.sum3rand) + [1,-1].choose}.clump(2)
+}.flatten(1) * 0.5;
+
+var dict = Dictionary.with(
+	*[
+		\cols -> 2,
+		\data -> Dictionary.newFrom(
+			points.collect{|x, i| [i, x]}.flatten)
+	]
+);
+
+~dataSet = FluidDataSet(s).load(dict).print;
+)
+
+
+// Create an SKMeans instance and a LabelSet for the cluster labels in the server
+(
+~clusters = FluidLabelSet(s);
+~skmeans = FluidSKMeans(s);
+)
+
+// Fit into 4 clusters
+(
+~skmeans.fitPredict(~dataSet,~clusters,action: {|c|
+	"Fitted.\n # Points in each cluster:".postln;
+	c.do{|x,i|
+		("Cluster" + i + "->" + x.asInteger + "points").postln;
+	}
+});
+)
+
+// Cols of SKMeans should match DataSet, size is the number of clusters
+
+~skmeans.cols;
+~skmeans.size;
+~skmeans.dump;
+
+(
+var norm_ds = FluidDataSet(s);
+FluidNormalize(s).fitTransform(~dataSet,norm_ds); // normalize for ease of viewing
+norm_ds.dump{
+	arg data;
+	~clusters.dump{
+		arg labels;
+		defer{
+			FluidPlotter(dict:data).categories_(labels);
+		};
+		norm_ds.free
+	};
+};
+)
+
+// single point query on arbitrary value
+(
+~inbuf = Buffer.loadCollection(s,{rrand(-1.0,1.0)} ! 2);
+~skmeans.predictPoint(~inbuf,{|x|"cluster: ".post; x.postln;});
+)
+
+::
+strong::Incremental Training::
+code::
+
+(
+// peek at a the dataset
+~dataSet.dump({
+	arg dict;
+	defer{
+		~fp = FluidPlotter(dict:dict,xmin:-1,ymin:-1).pointSizeScale_(3);
+	};
+});
+)
+
+// now keeping that window open, do 10 fittings, watching how it changes after each
+(
+fork{
+	~kmeans = FluidSKMeans(s,4,maxIter:1);
+	~ls = FluidLabelSet(s);
+	10.do{
+		arg i;
+		~kmeans.fitPredict(~dataSet,~ls,{
+			~ls.dump({
+				arg dict;
+				~fp.categories_(dict);
+			});
+		});
+		"Iteration: %".format(i+1).postln;
+		1.wait;
+	}
+}
+)
+
+::
+
+subsection:: Accessing the means
+
+We can get and set the means for each cluster, their centroid.
+
+code::
+
+// with the dataset and skmeans generated and trained in the code above
+(
+~centroids = FluidDataSet(s);
+~skmeans.getMeans(~centroids, {~centroids.print});
+)
+
+// We can also set them to arbitrary values to seed the process
+(
+~centroids.load(
+	Dictionary.newFrom([
+		\cols, 2,
+		\data, Dictionary.newFrom([
+			\0, [0.5,0.5],
+			\1, [-0.5,0.5],
+			\2, [0.5,-0.5],
+			\3, [-0.5,-0.5]
+		])
+	])
+);
+~skmeans.setMeans(~centroids);
+~skmeans.predict(~dataSet,~clusters);
+~clusters.dump{
+	arg dict;
+	var count = 0.dup(4);
+	dict["data"].keysValuesDo{
+		arg k, v;
+		count[v[0].asInteger] = count[v[0].asInteger] + 1;
+	};
+	"number of points in each cluster:".postln;
+	count.postln
+};
+)
+
+// We can further fit from the seeded means
+~skmeans.fit(~dataSet)
+// then retreive the improved means
+~skmeans.getMeans(~centroids, {~centroids.print});
+//subtle in this case but still.. each quadrant is where we seeded it.
+::
+
+subsection:: Cluster-distance Space
+
+We can get the spherical distance of a given point to each cluster. SKMeans differ from KMeans as it takes the angular distance (cosine) of the vector. This is often referred to as the cluster-distance space as it creates new dimensions for each given point, one distance per cluster.
+
+code::
+// with the dataset and skmeans generated and trained in the code above
+(
+~inbuf = Buffer.sendCollection(s,[0.5,0.5]);
+~encoded = Buffer(s)
+)
+
+// get the distance of our given point (b) to each cluster, thus giving us 4 dimensions in our cluster-distance space
+(
+~skmeans.encodePoint(~inbuf,~encoded,action:{
+  ~encoded.getn(0,4,action:{
+      arg dists;
+      dists.postln;
+  });
+});
+)
+
+// we can also encode a full dataset
+(
+~cdspace = FluidDataSet(s);
+// make a new dataset with 4 points
+~srcDS = FluidDataSet(s).load(
+	Dictionary.newFrom([
+		\cols, 2,
+		\data, Dictionary.newFrom([
+			\pp, [0.5,0.5],
+			\np, [-0.5,0.5],
+			\pn, [0.5,-0.5],
+			\nn, [-0.5,-0.5]
+		])
+	])
+);
+~skmeans.encode(~srcDS, ~cdspace);
+~cdspace.print;
+)
+::
+
+subsection:: Queries in a Synth
+
+This is the equivalent of predictPoint, but wholly on the server
+
+code::
+(
+{
+	var trig = Impulse.kr(5);
+	var point = WhiteNoise.kr(1.dup);
+	var inputPoint = LocalBuf(2);
+	var outputPoint = LocalBuf(1);
+	Poll.kr(trig, point, [\pointX,\pointY]);
+	point.collect{ |p,i| BufWr.kr([p],inputPoint,i)};
+	~skmeans.kr(trig,inputPoint,outputPoint);
+	Poll.kr(trig,BufRd.kr(1,outputPoint,0,interpolation:0),\cluster);
+}.play;
+)
+
+// to sonify the output, here are random values alternating quadrant, generated more quickly as the cursor moves rightwards
+(
+{
+	var trig = Impulse.kr(MouseX.kr(0,1).exprange(0.5,ControlRate.ir / 2));
+	var step = Stepper.kr(trig,max:3);
+	var point = TRand.kr(-0.1, [0.1, 0.1], trig) + [step.mod(2).linlin(0,1,-0.6,0.6),step.div(2).linlin(0,1,-0.6,0.6)] ;
+	var inputPoint = LocalBuf(2);
+	var outputPoint = LocalBuf(1);
+	point.collect{|p,i| BufWr.kr([p],inputPoint,i)};
+	~skmeans.kr(trig,inputPoint,outputPoint);
+	SinOsc.ar((BufRd.kr(1,outputPoint,0,interpolation:0) + 69).midicps,mul: 0.1);
+}.play;
+)
+
+::

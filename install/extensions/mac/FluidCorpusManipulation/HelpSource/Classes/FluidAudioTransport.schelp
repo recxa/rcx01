@@ -1,0 +1,152 @@
+TITLE:: FluidAudioTransport
+SUMMARY:: Interpolate between sounds
+CATEGORIES:: Libraries>FluidCorpusManipulation
+RELATED:: Classes/FluidNMFMorph,Classes/FluidBufNMFCross,Classes/FluidBufAudioTransport
+DESCRIPTION::
+
+    
+    Interpolates between the spectra of two sounds using optimal transport.
+
+
+    
+    Interpolates between the spectra of two sounds using the optimal transport algorithm. This enables morphing and hybridisation of the perceptual qualities of each source linearly.
+    See Henderson and Solomon (2019) AUDIO TRANSPORT: A GENERALIZED PORTAMENTO VIA OPTIMAL TRANSPORT, DaFx
+
+    LINK::https://arxiv.org/abs/1906.06763::
+
+
+Read more about FluidAudioTransport on the link::https://learn.flucoma.org/reference/audiotransport##learn platform::.
+
+CLASSMETHODS::
+
+METHOD:: ar
+
+ARGUMENT:: in
+Audio source A
+
+ARGUMENT:: in2
+Audio source B
+
+
+
+
+
+
+
+
+
+ARGUMENT:: interpolation
+
+    
+    The amount to interpolate between A and B (0-1, 0 = A, 1 = B)
+
+    STRONG::Constraints::
+
+    LIST::
+    ## 
+    Minimum: CODE::0.0::
+
+    ## 
+    Maximum: CODE::1.0::
+
+    ::
+
+
+ARGUMENT:: windowSize
+
+    
+    The window size in samples. As HPSS relies on spectral frames, we need to decide what precision we give it spectrally and temporally. For more information visit LINK::https://learn.flucoma.org/learn/fourier-transform/::
+
+
+
+ARGUMENT:: hopSize
+
+    
+    The window hop size in samples. As HPSS relies on spectral frames, we need to move the window forward. It can be any size, but low overlap may create audible artefacts. The -1 default value will default to half of windowSize (overlap of 2).
+
+
+
+ARGUMENT:: fftSize
+
+    
+    The inner FFT/IFFT size. It should be at least 4 samples long; at least the size of the window; and a power of 2. Making it larger than the window size provides interpolation in frequency. The -1 default value will use the next power of 2 equal or above the windowSize.
+
+
+
+ARGUMENT:: maxFFTSize
+
+    
+    Set an explicit upper bound on the FFT size at object instantiation. The default of CODE::nil:: or -1 sets this to whatever the initial FFT size is
+
+
+
+ 
+ 
+
+INSTANCEMETHODS::
+  
+EXAMPLES::
+
+code::
+
+(
+~srcA = Buffer.readChannel(s,FluidFilesPath("Tremblay-CEL-GlitchyMusicBoxMelo.wav"),channels:[0]);
+~srcB = Buffer.readChannel(s,FluidFilesPath("Nicol-LoopE-M.wav"),channels:[0]);
+)
+
+(
+{
+	var srcA = PlayBuf.ar(1,~srcA,BufRateScale.ir(~srcA),loop:1);
+	var srcB = PlayBuf.ar(1,~srcB,BufRateScale.ir(~srcB),loop:1);
+	FluidAudioTransport.ar(srcA,srcB,MouseX.kr,1024,64,2048).dup;
+}.play
+)
+
+::
+strong::The impact of FFT Settings::
+The larger the FFT size the better it blends the spectral qualities at the expense of smearing attacks. This will have a drastic impact on the characteristic of the interpolation.
+code::
+
+(
+~srcA = Buffer.readChannel(s,FluidFilesPath("Tremblay-CEL-GlitchyMusicBoxMelo.wav"),channels:[0]);
+~srcB = Buffer.readChannel(s,FluidFilesPath("Nicol-LoopE-M.wav"),channels:[0]);
+)
+
+(
+~synth = {
+	arg windowSize = 1024, hopSize = 64, fftSize = 2048;
+	var srcA = PlayBuf.ar(1,~srcA,BufRateScale.ir(~srcA),loop:1);
+	var srcB = PlayBuf.ar(1,~srcB,BufRateScale.ir(~srcB),loop:1);
+	FluidAudioTransport.ar(srcA,srcB,MouseX.kr,windowSize,hopSize,fftSize,16384).dup;
+}.play
+)
+
+// Try these different FFT settings to see how they affect the results of the audio transport algorithm
+
+~synth.set(\windowSize,256,\hopSize,16,\fftSize,256);
+~synth.set(\windowSize,1024,\hopSize,16,\fftSize,1024);
+~synth.set(\windowSize,1024,\hopSize,-1,\fftSize,-1);
+~synth.set(\windowSize,2048,\hopSize,-1,\fftSize,-1);
+~synth.set(\windowSize,4096,\hopSize,-1,\fftSize,-1);
+~synth.set(\windowSize,16384,\hopSize,-1,\fftSize,-1);
+
+::
+Creative Modulation
+code::
+
+(
+~srcA = Buffer.readChannel(s,FluidFilesPath("Tremblay-CEL-GlitchyMusicBoxMelo.wav"),channels:[0]);
+~srcB = Buffer.readChannel(s,FluidFilesPath("Nicol-LoopE-M.wav"),channels:[0]);
+)
+
+(
+{
+	var srcA = PlayBuf.ar(1,~srcA,BufRateScale.ir(~srcA),loop:1);
+	var srcB = PlayBuf.ar(1,~srcB,BufRateScale.ir(~srcB),loop:1);
+	var amp = Amplitude.kr(srcB);
+	var interp = LFDNoise3.kr(100 * amp).range(0,1).poll;
+	var sig = FluidAudioTransport.ar(srcA,srcB,interp,2048).dup;
+	sig + (srcB * -20.dbamp);
+}.play
+)
+::

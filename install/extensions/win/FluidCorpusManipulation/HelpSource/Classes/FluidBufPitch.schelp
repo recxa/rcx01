@@ -1,0 +1,473 @@
+TITLE:: FluidBufPitch
+SUMMARY:: Pitch Descriptor
+CATEGORIES:: Libraries>FluidCorpusManipulation
+RELATED:: Classes/FluidPitch,Classes/FluidBufLoudness,Classes/FluidBufMelBands,Classes/FluidBufMFCC,Classes/FluidBufSpectralShape,Classes/FluidBufStats,Guides/FluidCorpusManipulation,Classes/Pitch
+DESCRIPTION::
+
+    
+    Three popular pitch descriptors, all of which compute frequency and the confidence that a pitch is present.
+
+
+    
+    LINK::Classes/FluidPitch:: returns both CODE::pitch:: and CODE::confidence:: values. When no pitch can be detected, a pitch of 0 Hz is returned (or -999.0 when the unit is in MIDI note mode).
+
+    For information about the pitch descriptor algorithms, see the CODE::algorithm:: parameter below.
+
+    The "confidence" output is a value between 0 and 1 indicating how confident the algorithm is in the pitch that it is reporting. In effect this can be an estimation of how "noisy" (closer to 0) or "harmonic" (closer to 1) the spectrum is. The confidence may also be low when a signal contains polyphony, as the algorithms are not intended for multiple pitch streams.
+
+    The CODE::unit:: argument indicates whether the pitch output should be in hertz (indicated by 0) or MIDI note numbers (indicated by 1). MIDI note numbers may be useful, not only because of their direct relationship to MIDI-based synthesis systems, but also because of the logarithmic relationship to hertz, making them perceptually evenly-spaced units (1 MIDI note = 1 semitone).
+
+    For more information visit LINK::https://learn.flucoma.org/reference/pitch/::.
+
+
+Read more about FluidBufPitch on the link::https://learn.flucoma.org/reference/pitch##learn platform::.
+
+CLASSMETHODS::
+
+METHOD:: process, processBlocking
+  Processs the source LINK::Classes/Buffer:: on the LINK::Classes/Server::. CODE::processBlocking:: will execute directly in the server command FIFO, whereas CODE::process:: will delegate to a separate worker thread. The latter is generally only worthwhile for longer-running jobs where you don't wish to tie up the server.
+
+ARGUMENT:: server
+	The LINK::Classes/Server:: on which the buffers to be processed are allocated.
+
+
+
+
+
+
+
+
+ARGUMENT:: source
+
+    
+    The buffer to use as the source material to be pitch-tracked. The different channels of multichannel buffers will be processed sequentially.
+
+
+
+ARGUMENT:: startFrame
+
+    
+    Where in CODE::source:: to start the analysis, in samples. The default is 0.
+
+    STRONG::Constraints::
+
+    LIST::
+    ## 
+    Minimum: CODE::0::
+
+    ::
+
+
+ARGUMENT:: numFrames
+
+    
+    How many samples to analyse. The default of -1 indicates to analyse through to the end of the buffer.
+
+
+
+ARGUMENT:: startChan
+
+    
+    For multichannel CODE::source::, from which channel to begin analysing. The default is 0.
+
+    STRONG::Constraints::
+
+    LIST::
+    ## 
+    Minimum: CODE::0::
+
+    ::
+
+
+ARGUMENT:: numChans
+
+    
+    For multichannel CODE::source::, how many channels should be processed. The default of -1 indicates to analyse through the last channel in the buffer.
+
+
+
+ARGUMENT:: features
+
+    
+    The destination buffer for the descriptors.
+
+
+
+ARGUMENT:: select
+
+    
+    An array of CODE::symbols:: indicating which analyses to return. The options are CODE::pitch:: and CODE::confidence::. If nothing is specified, the object will return all the analyses. The analyses will always appear in their normal order, this argument just allows for a selection of them to be returned. Reordering the options in this argument will not reorder how the analyses are returned.
+
+
+
+ARGUMENT:: algorithm
+
+    
+    The algorithm to estimate the pitch. The options are:
+
+
+table::## 0 || 
+Cepstrum: Returns a pitch estimate as the location of the second highest peak in the Cepstrum of the signal (after DC).
+## 1 || 
+Harmonic Product Spectrum: Implements the Harmonic Product Spectrum algorithm for pitch detection . See e.g. A. Lerch, "An Introduction to Audio Content Analysis: Applications in Signal Processing and Music Informatics." John Wiley & Sons, 2012.https://onlinelibrary.wiley.com/doi/book/10.1002/9781118393550
+## 2 || 
+YinFFT: Implements the frequency domain version of the YIN algorithm, as described in P. M. Brossier, "Automatic Annotation of Musical Audio for Interactive Applications.” QMUL, London, UK, 2007. See also LINK::https://essentia.upf.edu/documentation/reference/streaming_PitchYinFFT.html::
+::
+ARGUMENT:: minFreq
+
+    
+    The minimum fundamental frequency that the algorithm withh search for. This sets the lowest value that will be generated. The default is 20.
+
+    STRONG::Constraints::
+
+    LIST::
+    ## 
+    Minimum: CODE::0::
+
+    ## 
+    Maximum: MIN(CODE::maxFreq, 10000::)
+
+    ::
+
+
+ARGUMENT:: maxFreq
+
+    
+    The maximum fundamental frequency that the algorithm withh search for. This sets the highest value that will be generated. The default is 10000.
+
+    STRONG::Constraints::
+
+    LIST::
+    ## 
+    Minimum: MAX(CODE::minFreq, 1::)
+
+    ## 
+    Maximum: CODE::20000::
+
+    ::
+
+
+ARGUMENT:: unit
+
+    
+    The unit of the estimated value. The default of 0 is in Hz. A value of 1 will convert to MIDI note values.
+
+
+
+ARGUMENT:: windowSize
+
+    
+    The window size. As sinusoidal estimation relies on spectral frames, we need to decide what precision we give it spectrally and temporally. For more information visit LINK::https://learn.flucoma.org/learn/fourier-transform/::
+
+
+
+ARGUMENT:: hopSize
+
+    
+    The window hop size. As sinusoidal estimation relies on spectral frames, we need to move the window forward. It can be any size, but low overlap will create audible artefacts.
+
+
+
+ARGUMENT:: fftSize
+
+    
+    The inner FFT/IFFT size. It should be at least 4 samples long, at least the size of the window, and a power of 2. Making it larger allows an oversampling of the spectral precision.
+
+
+
+ARGUMENT:: padding
+
+    
+    Controls the zero-padding added to either end of the source buffer or segment. Padding ensures all values are analysed. Possible values are:
+
+
+table::## 0 || 
+No padding - The first analysis window starts at time 0, and the samples at either end will be tapered by the STFT windowing function.
+## 1 || 
+Half the window size - The first sample is centred in the analysis window ensuring that the start and end of the segment are accounted for in the analysis.
+## 2 || 
+Window size minus the hop size - Mode 2 can be useful when the overlap factor (window size / hop size) is greater than 2, to ensure that the input samples at either end of the segment are covered by the same number of analysis frames as the rest of the analysed material.
+::
+ 
+ARGUMENT:: freeWhenDone
+  Free the server instance when processing complete. Default CODE::true::
+
+ARGUMENT:: action
+	A function to be evaluated once the offline process has finished and all Buffer's instance variables have been updated on the client side. The function will be passed CODE::[features]:: as an argument.
+
+RETURNS:: An instance of the processor
+
+METHOD:: kr
+  Trigger the equivalent behaviour to CODE::processBlocking / process:: from a LINK::Classes/Synth::. Can be useful for expressing a sequence of buffer and data processing jobs to execute. Note that the work still executes on the server command FIFO (not the audio thread), and it is the caller's responsibility to manage the sequencing, using the CODE::done:: status of the various UGens.
+
+
+
+
+
+
+
+ARGUMENT:: source
+
+    
+    The buffer to use as the source material to be pitch-tracked. The different channels of multichannel buffers will be processed sequentially.
+
+
+
+ARGUMENT:: startFrame
+
+    
+    Where in CODE::source:: to start the analysis, in samples. The default is 0.
+
+    STRONG::Constraints::
+
+    LIST::
+    ## 
+    Minimum: CODE::0::
+
+    ::
+
+
+ARGUMENT:: numFrames
+
+    
+    How many samples to analyse. The default of -1 indicates to analyse through to the end of the buffer.
+
+
+
+ARGUMENT:: startChan
+
+    
+    For multichannel CODE::source::, from which channel to begin analysing. The default is 0.
+
+    STRONG::Constraints::
+
+    LIST::
+    ## 
+    Minimum: CODE::0::
+
+    ::
+
+
+ARGUMENT:: numChans
+
+    
+    For multichannel CODE::source::, how many channels should be processed. The default of -1 indicates to analyse through the last channel in the buffer.
+
+
+
+ARGUMENT:: features
+
+    
+    The destination buffer for the descriptors.
+
+
+
+ARGUMENT:: select
+
+    
+    An array of CODE::symbols:: indicating which analyses to return. The options are CODE::pitch:: and CODE::confidence::. If nothing is specified, the object will return all the analyses. The analyses will always appear in their normal order, this argument just allows for a selection of them to be returned. Reordering the options in this argument will not reorder how the analyses are returned.
+
+
+
+ARGUMENT:: algorithm
+
+    
+    The algorithm to estimate the pitch. The options are:
+
+
+table::## 0 || 
+Cepstrum: Returns a pitch estimate as the location of the second highest peak in the Cepstrum of the signal (after DC).
+## 1 || 
+Harmonic Product Spectrum: Implements the Harmonic Product Spectrum algorithm for pitch detection . See e.g. A. Lerch, "An Introduction to Audio Content Analysis: Applications in Signal Processing and Music Informatics." John Wiley & Sons, 2012.https://onlinelibrary.wiley.com/doi/book/10.1002/9781118393550
+## 2 || 
+YinFFT: Implements the frequency domain version of the YIN algorithm, as described in P. M. Brossier, "Automatic Annotation of Musical Audio for Interactive Applications.” QMUL, London, UK, 2007. See also LINK::https://essentia.upf.edu/documentation/reference/streaming_PitchYinFFT.html::
+::
+ARGUMENT:: minFreq
+
+    
+    The minimum fundamental frequency that the algorithm withh search for. This sets the lowest value that will be generated. The default is 20.
+
+    STRONG::Constraints::
+
+    LIST::
+    ## 
+    Minimum: CODE::0::
+
+    ## 
+    Maximum: MIN(CODE::maxFreq, 10000::)
+
+    ::
+
+
+ARGUMENT:: maxFreq
+
+    
+    The maximum fundamental frequency that the algorithm withh search for. This sets the highest value that will be generated. The default is 10000.
+
+    STRONG::Constraints::
+
+    LIST::
+    ## 
+    Minimum: MAX(CODE::minFreq, 1::)
+
+    ## 
+    Maximum: CODE::20000::
+
+    ::
+
+
+ARGUMENT:: unit
+
+    
+    The unit of the estimated value. The default of 0 is in Hz. A value of 1 will convert to MIDI note values.
+
+
+
+ARGUMENT:: windowSize
+
+    
+    The window size. As sinusoidal estimation relies on spectral frames, we need to decide what precision we give it spectrally and temporally. For more information visit LINK::https://learn.flucoma.org/learn/fourier-transform/::
+
+
+
+ARGUMENT:: hopSize
+
+    
+    The window hop size. As sinusoidal estimation relies on spectral frames, we need to move the window forward. It can be any size, but low overlap will create audible artefacts.
+
+
+
+ARGUMENT:: fftSize
+
+    
+    The inner FFT/IFFT size. It should be at least 4 samples long, at least the size of the window, and a power of 2. Making it larger allows an oversampling of the spectral precision.
+
+
+
+ARGUMENT:: padding
+
+    
+    Controls the zero-padding added to either end of the source buffer or segment. Padding ensures all values are analysed. Possible values are:
+
+
+table::## 0 || 
+No padding - The first analysis window starts at time 0, and the samples at either end will be tapered by the STFT windowing function.
+## 1 || 
+Half the window size - The first sample is centred in the analysis window ensuring that the start and end of the segment are accounted for in the analysis.
+## 2 || 
+Window size minus the hop size - Mode 2 can be useful when the overlap factor (window size / hop size) is greater than 2, to ensure that the input samples at either end of the segment are covered by the same number of analysis frames as the rest of the analysed material.
+::
+ 
+ARGUMENT:: trig
+  A CODE::kr:: signal that will trigger execution
+
+ARGUMENT:: blocking
+  Whether to execute this process directly on the server command FIFO or delegate to a worker thread. See CODE::processBlocking/process:: for caveats.
+
+
+INSTANCEMETHODS::
+
+METHOD:: cancel
+  Cancels non-blocking processing
+
+METHOD:: wait
+  When called in the context of a LINK::Classes/Routine:: (it won't work otherwise), will block execution until the processor has finished. This can be convinient for writing sequences of processes more linearly than using lots of nested actions.
+  
+EXAMPLES::
+
+code::
+(
+// load a sound file
+~scratchy = Buffer.read(s,FluidFilesPath("Tremblay-ASWINE-ScratchySynth-M.wav"));
+
+// and a buffer to write the FluidBufPitch features into
+~pitch_features_buf = Buffer.new(s);
+
+// specify some params for the analysis (these are the defaults, but we'll specify them here so we can use them later)
+~windowSize = 1024;
+~hopSize = 512;
+)
+
+(
+// run the analysis
+FluidBufPitch.processBlocking(s,~scratchy,features:~pitch_features_buf,windowSize:~windowSize,hopSize:~hopSize);
+~pitch_features_buf.loadToFloatArray(action:{
+	arg fa;
+	~pitch_features_array = fa.clump(~pitch_features_buf.numChannels);
+	"done".postln;
+});
+)
+
+//look at the retrieved formatted array of [pitch,confidence] values
+~pitch_features_array.postln
+
+//iterate and make an array of the indices which are fitting the conditions:
+// - pitch > 500 hz
+// - confidence > 0.98
+(
+~selected_indices = List.new;
+~pitch_features_array.do({
+	arg val, i;
+	// if pitch is greater than 500Hz and confidence higher than 0.98, add the index to the list
+	if((val[0] > 500) && (val[1] > 0.98),{
+		~selected_indices.add(i);
+	});
+});
+~selected_indices.postln;
+)
+
+(
+// In order to granulate the frames, we need to convert our indices to centerPos in seconds for TGrains to use.
+~selected_center_pos = ~selected_indices.collect({arg i; (i * ~hopSize) / ~scratchy.sampleRate});
+~selected_center_pos.postln;
+// Load this list of center positions into a buffer so we can look them up later on the server
+~center_pos_buf = Buffer.loadCollection(s,~selected_center_pos);
+)
+
+(
+// Randomly create indices for the buffer and use them to look up center positions for TGrains.ar
+{
+	var trig = Impulse.kr(s.sampleRate / ~hopSize);
+	var index = TIRand.kr(0,BufFrames.ir(~center_pos_buf)-1,trig);
+	var centerPos = Index.kr(~center_pos_buf,index);
+	var pan = TRand.kr(-1.0,1.0,trig);
+	var sig;
+	sig = TGrains.ar(2,trig,~scratchy,BufRateScale.ir(~scratchy),centerPos,~windowSize / BufSampleRate.ir(~scratchy),pan,0.5);
+	sig;
+}.play;
+)
+::
+
+STRONG::A stereo buffer example.::
+CODE::
+// load two very different files
+(
+~piano = Buffer.read(s,FluidFilesPath("Tremblay-SA-UprightPianoPedalWide.wav"));
+~guitar = Buffer.read(s,FluidFilesPath("Tremblay-AaS-AcousticStrums-M.wav"));
+~both = Buffer(s);
+)
+
+// composite one on left one on right as test signals
+(
+FluidBufCompose.processBlocking(s,~piano, destination:~both,action:{"done".postln});
+FluidBufCompose.processBlocking(s,~guitar,numFrames:~piano.numFrames,startFrame:555000,destStartChan:1,destination:~both,action:{"done".postln});
+)
+
+// listen
+~both.play
+
+// create a buffer as destinations
+~pitch_analysis = Buffer(s);
+
+//run the process on them, with limited bandwidth
+FluidBufPitch.processBlocking(s, ~both, features: ~pitch_analysis, minFreq:60, maxFreq:4000,action:{"done".postln});
+
+// look at the buffer: [pitch,confidence] for left then [pitch,confidence] for right
+FluidWaveform(~both,featuresBuffer:~pitch_analysis,stackFeatures:true,bounds:Rect(0,0,1600,400));
+
+// blue is piano pitch
+// orange is piano pitch confidence
+// green is guitar pitch
+// red is guitar pitch confidence
+
+::

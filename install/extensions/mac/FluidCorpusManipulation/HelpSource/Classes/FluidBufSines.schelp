@@ -1,0 +1,605 @@
+TITLE:: FluidBufSines
+SUMMARY:: Buffer-Based Sinusoidal Modelling and Resynthesis
+CATEGORIES:: Libraries>FluidCorpusManipulation
+RELATED:: Classes/FluidSines,Classes/FluidBufHPSS,Classes/FluidBufTransients,Guides/,Classes/SinOsc
+DESCRIPTION::
+
+    
+    Sinusoidal modelling on buffers
+
+
+    
+    It implements a mix of algorithms taken from classic papers.
+
+    The algorithm will take a buffer in, and will divide it in two parts:
+
+    LIST::
+    ## 
+    a reconstruction of what it detects as sinusoidal
+
+    ## 
+    a residual derived from the previous buffer to allow null-summing
+
+    ::
+    The whole process is based on the assumption that signal is made of pitched steady components that have a long-enough duration and are periodic enough to be perceived as such, that can be tracked, resynthesised and removed from the original, leaving behind what is considered as non-pitched, noisy, and/or transient. It first tracks the peaks, then checks if they are the continuation of a peak in previous spectral frames, by assigning them a track.
+
+
+Read more about FluidBufSines on the link::https://learn.flucoma.org/reference/sines##learn platform::.
+
+CLASSMETHODS::
+
+METHOD:: process, processBlocking
+  Processs the source LINK::Classes/Buffer:: on the LINK::Classes/Server::. CODE::processBlocking:: will execute directly in the server command FIFO, whereas CODE::process:: will delegate to a separate worker thread. The latter is generally only worthwhile for longer-running jobs where you don't wish to tie up the server.
+
+ARGUMENT:: server
+	The LINK::Classes/Server:: on which the buffers to be processed are allocated.
+
+
+
+
+
+
+
+
+ARGUMENT:: source
+
+    
+    The buffer to use as the source material to be decomposed through the sinusoidal modelling process. The different channels of multichannel buffers will be processed sequentially.
+
+
+
+ARGUMENT:: startFrame
+
+    
+    Where in the srcBuf should the process start, in samples.
+
+    STRONG::Constraints::
+
+    LIST::
+    ## 
+    Minimum: CODE::0::
+
+    ::
+
+
+ARGUMENT:: numFrames
+
+    
+    How many frames should be processed.
+
+
+
+ARGUMENT:: startChan
+
+    
+    For multichannel srcBuf, which channel should be processed first.
+
+    STRONG::Constraints::
+
+    LIST::
+    ## 
+    Minimum: CODE::0::
+
+    ::
+
+
+ARGUMENT:: numChans
+
+    
+    For multichannel srcBuf, how many channels should be processed.
+
+
+
+ARGUMENT:: sines
+
+    
+    The buffer where the extracted sinusoidal component will be reconstructed.
+
+
+
+ARGUMENT:: residual
+
+    
+    The buffer where the residual of the sinusoidal component will be reconstructed.
+
+
+
+ARGUMENT:: bandwidth
+
+    
+    The number of bins used to resynthesises a peak. It has an effect on CPU cost: the widest is more accurate but more computationally expensive. It is capped at (fftSize / 2) + 1.
+
+    STRONG::Constraints::
+
+    LIST::
+    ## 
+    Minimum: CODE::1::
+
+    ## 
+    Maximum: CODE::(FFT Size / 2) + 1 (see fft settings)::
+
+    ::
+
+
+ARGUMENT:: detectionThreshold
+
+    
+    The threshold in dB above which a magnitude peak is considered to be a sinusoidal component.
+
+    STRONG::Constraints::
+
+    LIST::
+    ## 
+    Minimum: CODE::-144::
+
+    ## 
+    Maximum: CODE::0::
+
+    ::
+
+
+ARGUMENT:: birthLowThreshold
+
+    
+    The threshold in dB above which to consider a peak to start a sinusoidal component tracking, for the low end of the spectrum. It is interpolated across the spectrum until birthHighThreshold at half-Nyquist.
+
+    STRONG::Constraints::
+
+    LIST::
+    ## 
+    Minimum: CODE::-144::
+
+    ## 
+    Maximum: CODE::0::
+
+    ::
+
+
+ARGUMENT:: birthHighThreshold
+
+    
+    The threshold in dB above which to consider a peak to start a sinusoidal component tracking, for the high end of the spectrum. It is interpolated across the spectrum until birthLowThreshold at DC.
+
+    STRONG::Constraints::
+
+    LIST::
+    ## 
+    Minimum: CODE::-144::
+
+    ## 
+    Maximum: CODE::0::
+
+    ::
+
+
+ARGUMENT:: minTrackLen
+
+    
+    The minimum duration, in spectral frames, for a sinusoidal track to be accepted as a partial. It allows to remove bubbly pitchy artefactss, but is more CPU intensive and might reject quick pitch material.
+
+    STRONG::Constraints::
+
+    LIST::
+    ## 
+    Minimum: CODE::1::
+
+    ::
+
+
+ARGUMENT:: trackMethod
+
+    
+    The algorithm used to track the sinusoidal continuity between spectral frames. 0 is the default, "Greedy", and 1 is a more expensive [^"Hungarian"]( Neri, J., and Depalle, P., "Fast Partial Tracking of Audio with Real-Time Capability through Linear Programming". Proceedings of DAFx-2018. ) one.
+
+
+
+ARGUMENT:: trackMagRange
+
+    
+    The amplitude difference allowed for a track to diverge between frames, in dB.
+
+    STRONG::Constraints::
+
+    LIST::
+    ## 
+    Minimum: CODE::1.0::
+
+    ## 
+    Maximum: CODE::200.0::
+
+    ::
+
+
+ARGUMENT:: trackFreqRange
+
+    
+    The frequency difference allowed for a track to diverge between frames, in Hertz.
+
+    STRONG::Constraints::
+
+    LIST::
+    ## 
+    Minimum: CODE::1.0::
+
+    ## 
+    Maximum: CODE::10000.0::
+
+    ::
+
+
+ARGUMENT:: trackProb
+
+    
+    The probability of the tracking algorithm to find a track.
+
+    STRONG::Constraints::
+
+    LIST::
+    ## 
+    Minimum: CODE::0.0::
+
+    ## 
+    Maximum: CODE::1.0::
+
+    ::
+
+
+ARGUMENT:: windowSize
+
+    
+    The window size. As sinusoidal estimation relies on spectral frames, we need to decide what precision we give it spectrally and temporally. For more information visit LINK::https://learn.flucoma.org/learn/fourier-transform/::
+
+
+
+ARGUMENT:: hopSize
+
+    
+    The window hop size. As sinusoidal estimation relies on spectral frames, we need to move the window forward. It can be any size, but low overlap will create audible artefacts.
+
+
+
+ARGUMENT:: fftSize
+
+    
+    The inner FFT/IFFT size. It should be at least 4 samples long, at least the size of the window, and a power of 2. Making it larger allows an oversampling of the spectral precision. The -1 default value will default to the highest of windowSize and (bandwidth - 1) * 2.
+
+
+
+ 
+ARGUMENT:: freeWhenDone
+  Free the server instance when processing complete. Default CODE::true::
+
+ARGUMENT:: action
+	A function to be evaluated once the offline process has finished and all Buffer's instance variables have been updated on the client side. The function will be passed CODE::[features]:: as an argument.
+
+RETURNS:: An instance of the processor
+
+METHOD:: kr
+  Trigger the equivalent behaviour to CODE::processBlocking / process:: from a LINK::Classes/Synth::. Can be useful for expressing a sequence of buffer and data processing jobs to execute. Note that the work still executes on the server command FIFO (not the audio thread), and it is the caller's responsibility to manage the sequencing, using the CODE::done:: status of the various UGens.
+
+
+
+
+
+
+
+ARGUMENT:: source
+
+    
+    The buffer to use as the source material to be decomposed through the sinusoidal modelling process. The different channels of multichannel buffers will be processed sequentially.
+
+
+
+ARGUMENT:: startFrame
+
+    
+    Where in the srcBuf should the process start, in samples.
+
+    STRONG::Constraints::
+
+    LIST::
+    ## 
+    Minimum: CODE::0::
+
+    ::
+
+
+ARGUMENT:: numFrames
+
+    
+    How many frames should be processed.
+
+
+
+ARGUMENT:: startChan
+
+    
+    For multichannel srcBuf, which channel should be processed first.
+
+    STRONG::Constraints::
+
+    LIST::
+    ## 
+    Minimum: CODE::0::
+
+    ::
+
+
+ARGUMENT:: numChans
+
+    
+    For multichannel srcBuf, how many channels should be processed.
+
+
+
+ARGUMENT:: sines
+
+    
+    The buffer where the extracted sinusoidal component will be reconstructed.
+
+
+
+ARGUMENT:: residual
+
+    
+    The buffer where the residual of the sinusoidal component will be reconstructed.
+
+
+
+ARGUMENT:: bandwidth
+
+    
+    The number of bins used to resynthesises a peak. It has an effect on CPU cost: the widest is more accurate but more computationally expensive. It is capped at (fftSize / 2) + 1.
+
+    STRONG::Constraints::
+
+    LIST::
+    ## 
+    Minimum: CODE::1::
+
+    ## 
+    Maximum: CODE::(FFT Size / 2) + 1 (see fft settings)::
+
+    ::
+
+
+ARGUMENT:: detectionThreshold
+
+    
+    The threshold in dB above which a magnitude peak is considered to be a sinusoidal component.
+
+    STRONG::Constraints::
+
+    LIST::
+    ## 
+    Minimum: CODE::-144::
+
+    ## 
+    Maximum: CODE::0::
+
+    ::
+
+
+ARGUMENT:: birthLowThreshold
+
+    
+    The threshold in dB above which to consider a peak to start a sinusoidal component tracking, for the low end of the spectrum. It is interpolated across the spectrum until birthHighThreshold at half-Nyquist.
+
+    STRONG::Constraints::
+
+    LIST::
+    ## 
+    Minimum: CODE::-144::
+
+    ## 
+    Maximum: CODE::0::
+
+    ::
+
+
+ARGUMENT:: birthHighThreshold
+
+    
+    The threshold in dB above which to consider a peak to start a sinusoidal component tracking, for the high end of the spectrum. It is interpolated across the spectrum until birthLowThreshold at DC.
+
+    STRONG::Constraints::
+
+    LIST::
+    ## 
+    Minimum: CODE::-144::
+
+    ## 
+    Maximum: CODE::0::
+
+    ::
+
+
+ARGUMENT:: minTrackLen
+
+    
+    The minimum duration, in spectral frames, for a sinusoidal track to be accepted as a partial. It allows to remove bubbly pitchy artefactss, but is more CPU intensive and might reject quick pitch material.
+
+    STRONG::Constraints::
+
+    LIST::
+    ## 
+    Minimum: CODE::1::
+
+    ::
+
+
+ARGUMENT:: trackMethod
+
+    
+    The algorithm used to track the sinusoidal continuity between spectral frames. 0 is the default, "Greedy", and 1 is a more expensive [^"Hungarian"]( Neri, J., and Depalle, P., "Fast Partial Tracking of Audio with Real-Time Capability through Linear Programming". Proceedings of DAFx-2018. ) one.
+
+
+
+ARGUMENT:: trackMagRange
+
+    
+    The amplitude difference allowed for a track to diverge between frames, in dB.
+
+    STRONG::Constraints::
+
+    LIST::
+    ## 
+    Minimum: CODE::1.0::
+
+    ## 
+    Maximum: CODE::200.0::
+
+    ::
+
+
+ARGUMENT:: trackFreqRange
+
+    
+    The frequency difference allowed for a track to diverge between frames, in Hertz.
+
+    STRONG::Constraints::
+
+    LIST::
+    ## 
+    Minimum: CODE::1.0::
+
+    ## 
+    Maximum: CODE::10000.0::
+
+    ::
+
+
+ARGUMENT:: trackProb
+
+    
+    The probability of the tracking algorithm to find a track.
+
+    STRONG::Constraints::
+
+    LIST::
+    ## 
+    Minimum: CODE::0.0::
+
+    ## 
+    Maximum: CODE::1.0::
+
+    ::
+
+
+ARGUMENT:: windowSize
+
+    
+    The window size. As sinusoidal estimation relies on spectral frames, we need to decide what precision we give it spectrally and temporally. For more information visit LINK::https://learn.flucoma.org/learn/fourier-transform/::
+
+
+
+ARGUMENT:: hopSize
+
+    
+    The window hop size. As sinusoidal estimation relies on spectral frames, we need to move the window forward. It can be any size, but low overlap will create audible artefacts.
+
+
+
+ARGUMENT:: fftSize
+
+    
+    The inner FFT/IFFT size. It should be at least 4 samples long, at least the size of the window, and a power of 2. Making it larger allows an oversampling of the spectral precision. The -1 default value will default to the highest of windowSize and (bandwidth - 1) * 2.
+
+
+
+ 
+ARGUMENT:: trig
+  A CODE::kr:: signal that will trigger execution
+
+ARGUMENT:: blocking
+  Whether to execute this process directly on the server command FIFO or delegate to a worker thread. See CODE::processBlocking/process:: for caveats.
+
+
+INSTANCEMETHODS::
+
+METHOD:: cancel
+  Cancels non-blocking processing
+
+METHOD:: wait
+  When called in the context of a LINK::Classes/Routine:: (it won't work otherwise), will block execution until the processor has finished. This can be convinient for writing sequences of processes more linearly than using lots of nested actions.
+  
+EXAMPLES::
+code::
+
+(
+~src = Buffer.readChannel(s,FluidFilesPath("Tremblay-BeatRemember.wav"),channels:[0]);
+~sines = Buffer(s);
+~residual = Buffer(s);
+)
+
+// listen to the original if you want
+~src.play;
+
+FluidBufSines.processBlocking(s,~src,sines:~sines,residual:~residual,action:{"done".postln;});
+
+~sines.play;
+~residual.play;
+
+// change some parameters
+
+// tracks can be short but the detection threshold is higher than the default
+(
+FluidBufSines.processBlocking(s,
+	~src,
+	sines:~sines,
+	residual:~residual,
+	detectionThreshold:-40,
+	minTrackLen:1,
+	action:{"done".postln;}
+);
+)
+
+~sines.play;
+~residual.play;
+
+// increase the minimum track length
+(
+FluidBufSines.processBlocking(s,
+	~src,
+	sines:~sines,
+	residual:~residual,
+	detectionThreshold:-40,
+	minTrackLen:15,
+	action:{"done".postln;}
+);
+)
+
+~sines.play;
+~residual.play;
+
+// lower the threshold but increase the track length drastically
+(
+FluidBufSines.processBlocking(s,
+	~src,
+	sines:~sines,
+	residual:~residual,
+	detectionThreshold:-80,
+	minTrackLen:50,
+	action:{"done".postln;}
+);
+)
+
+~sines.play;
+~residual.play;
+
+// increase the threshold drastically but lower the minimum track length
+(
+FluidBufSines.processBlocking(s,
+	~src,
+	sines:~sines,
+	residual:~residual,
+	detectionThreshold:-24,
+	minTrackLen:1,
+	action:{"done".postln;}
+);
+)
+
+~sines.play;
+~residual.play;
+
+::

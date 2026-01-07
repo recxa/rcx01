@@ -1,0 +1,673 @@
+TITLE:: FluidBufAmpGate
+SUMMARY:: Gate Detection on a Buffer
+CATEGORIES:: Libraries>FluidCorpusManipulation
+RELATED:: Classes/FluidAmpGate,Classes/FluidBufAmpSlice,Classes/FluidAmpSlice,Classes/FluidBufOnsetSlice,Classes/FluidBufNoveltySlice,Classes/FluidBufTransientSlice,Guides/FluidCorpusManipulation
+DESCRIPTION::
+
+    
+    Absolute amplitude threshold gate detector on audio in a buffer
+
+
+    
+    BufAmpGate outputs a two-channel buffer containing open and close positions of the gates. Each frame of the buffer contains an onset (opening) position on channel 0 and the corresponding offset (closing) position on channel 1 (both in samples). The buffer will have as many frames as gate events detected.
+
+    The gate detects an onset (opens) when the internal envelope follower (controlled by CODE::rampUp:: and CODE::rampDown::) goes above a specified CODE::onThreshold:: (in dB) for at least CODE::minLengthAbove:: samples. The gate will stay open until the envelope follower goes below CODE::offThreshold:: (in dB) for at least CODE::minLengthBelow:: samples, which triggers an offset.
+
+
+Read more about FluidBufAmpGate on the link::https://learn.flucoma.org/reference/ampgate##learn platform::.
+
+CLASSMETHODS::
+
+METHOD:: process, processBlocking
+  Processs the source LINK::Classes/Buffer:: on the LINK::Classes/Server::. CODE::processBlocking:: will execute directly in the server command FIFO, whereas CODE::process:: will delegate to a separate worker thread. The latter is generally only worthwhile for longer-running jobs where you don't wish to tie up the server.
+
+ARGUMENT:: server
+	The LINK::Classes/Server:: on which the buffers to be processed are allocated.
+
+
+
+
+
+
+
+
+ARGUMENT:: source
+
+    
+    The buffer to analyse for gate information. Multichannel buffers will be summed to mono for analysis.
+
+
+
+ARGUMENT:: startFrame
+
+    
+    Where in CODE::source:: to begin the analysis (in samples). The default is 0.
+
+    STRONG::Constraints::
+
+    LIST::
+    ## 
+    Minimum: CODE::0::
+
+    ::
+
+
+ARGUMENT:: numFrames
+
+    
+    How many frames (audio samples) to analyse. The default of -1 indicates to analyse through end of the buffer
+
+
+
+ARGUMENT:: startChan
+
+    
+    For multichannel sources, at which channel to begin the analysis. The default is 0.
+
+    STRONG::Constraints::
+
+    LIST::
+    ## 
+    Minimum: CODE::0::
+
+    ::
+
+
+ARGUMENT:: numChans
+
+    
+    For multichannel sources, how many channels should be included in the analysis (starting from CODE::startChan::). The default of -1 indicates to include all the channels from CODE::startChan:: through the rest of the buffer. If more than one channel is specified, the channels will be summed to mono for analysis.
+
+
+
+ARGUMENT:: indices
+
+    
+    The buffer to write the gate information into. Buffer will be resized appropriately so that each frame contains an onset (opening) position on channel 0 and the corresponding offset (closing) position on channel 1 (both in samples). The buffer will have as many frames as gate events detected.
+
+
+
+ARGUMENT:: rampUp
+
+    
+    The number of samples the envelope follower will take to reach the next value when rising.
+
+    STRONG::Constraints::
+
+    LIST::
+    ## 
+    Minimum: CODE::1::
+
+    ::
+
+
+ARGUMENT:: rampDown
+
+    
+    The number of samples the envelope follower will take to reach the next value when falling.
+
+    STRONG::Constraints::
+
+    LIST::
+    ## 
+    Minimum: CODE::1::
+
+    ::
+
+
+ARGUMENT:: onThreshold
+
+    
+    The threshold in dB of the envelope follower to trigger an onset.
+
+    STRONG::Constraints::
+
+    LIST::
+    ## 
+    Minimum: CODE::-144::
+
+    ## 
+    Maximum: CODE::144::
+
+    ::
+
+
+ARGUMENT:: offThreshold
+
+    
+    The threshold in dB of the envelope follower to trigger an offset.
+
+    STRONG::Constraints::
+
+    LIST::
+    ## 
+    Minimum: CODE::-144::
+
+    ## 
+    Maximum: CODE::144::
+
+    ::
+
+
+ARGUMENT:: minSliceLength
+
+    
+    The minimum length in samples for which the gate will stay open. Changes of states during this period after an onset will be ignored.
+
+    STRONG::Constraints::
+
+    LIST::
+    ## 
+    Minimum: CODE::1::
+
+    ::
+
+
+ARGUMENT:: minSilenceLength
+
+    
+    The minimum length in samples for which the gate will stay closed. Changes of states during that period after an offset will be ignored.
+
+    STRONG::Constraints::
+
+    LIST::
+    ## 
+    Minimum: CODE::1::
+
+    ::
+
+
+ARGUMENT:: minLengthAbove
+
+    
+    The length in samples that the envelope must be above the threshold to consider it a valid onset. The onset will be triggered at the first sample when the condition is met.
+
+    STRONG::Constraints::
+
+    LIST::
+    ## 
+    Minimum: CODE::1::
+
+    ::
+
+
+ARGUMENT:: minLengthBelow
+
+    
+    The length in samples that the envelope must be below the threshold to consider it a valid offset. The offset will be triggered at the first sample when the condition is met.
+
+    STRONG::Constraints::
+
+    LIST::
+    ## 
+    Minimum: CODE::1::
+
+    ::
+
+
+ARGUMENT:: lookBack
+
+    
+    When an onset is detected, the algorithm will look in the recent past (this length in samples) for a minimum in the envelope follower to identify as the onset point.
+
+    STRONG::Constraints::
+
+    LIST::
+    ## 
+    Minimum: CODE::0::
+
+    ::
+
+
+ARGUMENT:: lookAhead
+
+    
+    When an offset is detected, the algorithm will wait this duration (in samples) to find a minimum in the envelope follower to identify as the offset point.
+
+    STRONG::Constraints::
+
+    LIST::
+    ## 
+    Minimum: CODE::0::
+
+    ::
+
+
+ARGUMENT:: highPassFreq
+
+    
+    The frequency of the fourth-order Linkwitz-Riley high-pass filter (LINK::https://en.wikipedia.org/wiki/Linkwitz%E2%80%93Riley_filter::) applied to the signal to minimise low frequency intermodulation with very short ramp lengths. A frequency of 0 bypasses the filter.
+
+    STRONG::Constraints::
+
+    LIST::
+    ## 
+    Minimum: CODE::0::
+
+    ::
+
+
+ 
+ARGUMENT:: freeWhenDone
+  Free the server instance when processing complete. Default CODE::true::
+
+ARGUMENT:: action
+	A function to be evaluated once the offline process has finished and all Buffer's instance variables have been updated on the client side. The function will be passed CODE::[features]:: as an argument.
+
+RETURNS:: An instance of the processor
+
+METHOD:: kr
+  Trigger the equivalent behaviour to CODE::processBlocking / process:: from a LINK::Classes/Synth::. Can be useful for expressing a sequence of buffer and data processing jobs to execute. Note that the work still executes on the server command FIFO (not the audio thread), and it is the caller's responsibility to manage the sequencing, using the CODE::done:: status of the various UGens.
+
+
+
+
+
+
+
+ARGUMENT:: source
+
+    
+    The buffer to analyse for gate information. Multichannel buffers will be summed to mono for analysis.
+
+
+
+ARGUMENT:: startFrame
+
+    
+    Where in CODE::source:: to begin the analysis (in samples). The default is 0.
+
+    STRONG::Constraints::
+
+    LIST::
+    ## 
+    Minimum: CODE::0::
+
+    ::
+
+
+ARGUMENT:: numFrames
+
+    
+    How many frames (audio samples) to analyse. The default of -1 indicates to analyse through end of the buffer
+
+
+
+ARGUMENT:: startChan
+
+    
+    For multichannel sources, at which channel to begin the analysis. The default is 0.
+
+    STRONG::Constraints::
+
+    LIST::
+    ## 
+    Minimum: CODE::0::
+
+    ::
+
+
+ARGUMENT:: numChans
+
+    
+    For multichannel sources, how many channels should be included in the analysis (starting from CODE::startChan::). The default of -1 indicates to include all the channels from CODE::startChan:: through the rest of the buffer. If more than one channel is specified, the channels will be summed to mono for analysis.
+
+
+
+ARGUMENT:: indices
+
+    
+    The buffer to write the gate information into. Buffer will be resized appropriately so that each frame contains an onset (opening) position on channel 0 and the corresponding offset (closing) position on channel 1 (both in samples). The buffer will have as many frames as gate events detected.
+
+
+
+ARGUMENT:: rampUp
+
+    
+    The number of samples the envelope follower will take to reach the next value when rising.
+
+    STRONG::Constraints::
+
+    LIST::
+    ## 
+    Minimum: CODE::1::
+
+    ::
+
+
+ARGUMENT:: rampDown
+
+    
+    The number of samples the envelope follower will take to reach the next value when falling.
+
+    STRONG::Constraints::
+
+    LIST::
+    ## 
+    Minimum: CODE::1::
+
+    ::
+
+
+ARGUMENT:: onThreshold
+
+    
+    The threshold in dB of the envelope follower to trigger an onset.
+
+    STRONG::Constraints::
+
+    LIST::
+    ## 
+    Minimum: CODE::-144::
+
+    ## 
+    Maximum: CODE::144::
+
+    ::
+
+
+ARGUMENT:: offThreshold
+
+    
+    The threshold in dB of the envelope follower to trigger an offset.
+
+    STRONG::Constraints::
+
+    LIST::
+    ## 
+    Minimum: CODE::-144::
+
+    ## 
+    Maximum: CODE::144::
+
+    ::
+
+
+ARGUMENT:: minSliceLength
+
+    
+    The minimum length in samples for which the gate will stay open. Changes of states during this period after an onset will be ignored.
+
+    STRONG::Constraints::
+
+    LIST::
+    ## 
+    Minimum: CODE::1::
+
+    ::
+
+
+ARGUMENT:: minSilenceLength
+
+    
+    The minimum length in samples for which the gate will stay closed. Changes of states during that period after an offset will be ignored.
+
+    STRONG::Constraints::
+
+    LIST::
+    ## 
+    Minimum: CODE::1::
+
+    ::
+
+
+ARGUMENT:: minLengthAbove
+
+    
+    The length in samples that the envelope must be above the threshold to consider it a valid onset. The onset will be triggered at the first sample when the condition is met.
+
+    STRONG::Constraints::
+
+    LIST::
+    ## 
+    Minimum: CODE::1::
+
+    ::
+
+
+ARGUMENT:: minLengthBelow
+
+    
+    The length in samples that the envelope must be below the threshold to consider it a valid offset. The offset will be triggered at the first sample when the condition is met.
+
+    STRONG::Constraints::
+
+    LIST::
+    ## 
+    Minimum: CODE::1::
+
+    ::
+
+
+ARGUMENT:: lookBack
+
+    
+    When an onset is detected, the algorithm will look in the recent past (this length in samples) for a minimum in the envelope follower to identify as the onset point.
+
+    STRONG::Constraints::
+
+    LIST::
+    ## 
+    Minimum: CODE::0::
+
+    ::
+
+
+ARGUMENT:: lookAhead
+
+    
+    When an offset is detected, the algorithm will wait this duration (in samples) to find a minimum in the envelope follower to identify as the offset point.
+
+    STRONG::Constraints::
+
+    LIST::
+    ## 
+    Minimum: CODE::0::
+
+    ::
+
+
+ARGUMENT:: highPassFreq
+
+    
+    The frequency of the fourth-order Linkwitz-Riley high-pass filter (LINK::https://en.wikipedia.org/wiki/Linkwitz%E2%80%93Riley_filter::) applied to the signal to minimise low frequency intermodulation with very short ramp lengths. A frequency of 0 bypasses the filter.
+
+    STRONG::Constraints::
+
+    LIST::
+    ## 
+    Minimum: CODE::0::
+
+    ::
+
+
+ 
+ARGUMENT:: trig
+  A CODE::kr:: signal that will trigger execution
+
+ARGUMENT:: blocking
+  Whether to execute this process directly on the server command FIFO or delegate to a worker thread. See CODE::processBlocking/process:: for caveats.
+
+
+INSTANCEMETHODS::
+
+METHOD:: cancel
+  Cancels non-blocking processing
+
+METHOD:: wait
+  When called in the context of a LINK::Classes/Routine:: (it won't work otherwise), will block execution until the processor has finished. This can be convinient for writing sequences of processes more linearly than using lots of nested actions.
+  
+EXAMPLES::
+CODE::
+~src = Buffer.read(s,FluidFilesPath("Constanzo-PreparedSnare-M.wav"));
+
+// detect gates and post some info
+(
+~indices = Buffer(s);
+FluidBufAmpGate.processBlocking(s,~src,indices:~indices,rampUp:110,rampDown:2205,onThreshold:-40, offThreshold:-41,minSilenceLength:1100,lookBack:441);
+~indices.loadToFloatArray(action:{
+	arg fa;
+	var events = (fa.size / 2).asInteger;
+	var avg = fa.clump(2).collect{arg arr; arr[1] - arr[0]}.mean / ~src.sampleRate;
+	"found % gate events averaging % seconds".format(events,avg).postln;
+});
+)
+
+//loops over a gate event from onset to offset using MouseX to choose which gate event
+(
+{
+	var gate_index = MouseX.kr(0,~indices.numFrames).poll(label:"gate index");
+	var start, end, phs;
+	# start, end = BufRd.kr(2,~indices,gate_index,1,1);
+	phs = Phasor.ar(0,BufRateScale.ir(~src),start,end);
+	BufRd.ar(1,~src,phs,1,4).dup;
+}.play;
+)
+::
+strong::Visualize it with FluidWaveform::
+code::
+
+~src = Buffer.read(s,FluidFilesPath("Constanzo-PreparedSnare-M.wav"));
+(
+~indices = Buffer(s);
+FluidBufAmpGate.processBlocking(s,~src,indices:~indices,rampUp:110,rampDown:2205,onThreshold:-40, offThreshold:-41,minSilenceLength:1100,lookBack:441);
+FluidWaveform(~src,~indices,bounds:Rect(0,0,1600,400));
+)
+
+~src = Buffer.read(s,FluidFilesPath("Nicol-LoopE-M.wav"));
+(
+~indices = Buffer(s);
+FluidBufAmpGate.processBlocking(s,~src,indices:~indices,rampUp:110,rampDown:441,onThreshold:-20, offThreshold:-24,minSilenceLength:441,lookBack:441);
+FluidWaveform(~src,~indices,bounds:Rect(0,0,1600,400));
+)
+
+::
+strong::Remove silence from a buffer::
+code::
+
+~src = Buffer.read(s,FluidFilesPath("Olencki-TenTromboneLongTones-M.wav"));
+
+(
+var concat_buf = Buffer(s);
+var indices = Buffer(s);
+var display_buffer = Buffer(s);
+FluidBufCompose.processBlocking(s,~src,destination:display_buffer);
+FluidBufAmpGate.processBlocking(s,display_buffer,indices:indices,onThreshold:-30,offThreshold:-40,minSliceLength:0.1*s.sampleRate,minSilenceLength:0.1*s.sampleRate,rampDown:0.01*s.sampleRate);
+indices.loadToFloatArray(action:{
+	arg fa;
+	var current_frame = 0;
+
+	// this array is initally flat, but is alternating [ onset0 , offset0 , onset1 , offset1 , onset2 ... ],
+	// so by using .clump(2) we clump each onset and offest together to get an array like this:
+	// [ [ onset0 , offset0 ] , [ onset1 , offset1 ] , [ onset2 , offset2 ] , ... ]
+	fa = fa.clump(2);
+
+	fa.do{
+		arg arr, i;
+		var startFrame = arr[0];
+		var numFrames = arr[1] - startFrame;
+		"%\tstart: %\tend: %".format(i,startFrame,numFrames).postln;
+		FluidBufCompose.processBlocking(s,display_buffer,startFrame,numFrames,destination:concat_buf,destStartFrame:current_frame);
+		current_frame = current_frame + numFrames;
+	};
+
+	FluidBufCompose.processBlocking(s,concat_buf,destination:display_buffer,destStartChan:1);
+
+	s.sync;
+
+	{
+		var win = Window(bounds:Rect(0,0,1600,400));
+		FluidWaveform(display_buffer,parent:win,bounds:win.bounds,standalone:false);
+		UserView(win,win.bounds)
+		.drawFunc_{
+			["original","with silence removed"].do{
+				arg txt, i;
+				var y_ = (win.bounds.height * 0.5 * i) + (win.bounds.height * 0.1);
+				Pen.stringAtPoint(txt,Point(10,y_),color:Color.red);
+			};
+		};
+		win.front;
+		display_buffer.play;
+	}.defer;
+});
+)
+::
+strong::Visualizing Parameters::
+code::
+
+~drum_hit = Buffer.read(s,FluidFilesPath("Nicol-LoopE-M.wav"),350854,21023);
+
+// we'll try to tweak some parameters to slice out this drum hit just how we want
+(
+~drum_hit.play;
+FluidWaveform(~drum_hit);
+)
+
+// just putting in some thresholds probably won't provide what we're looking for
+(
+~indices = Buffer(s);
+FluidBufAmpGate.processBlocking(s,~drum_hit,indices:~indices,onThreshold:-20,offThreshold:-20);
+FluidWaveform(~drum_hit,~indices);
+)
+
+// adjusting the ramp times (units are in samples) will help smooth out the envelope follower
+(
+~indices = Buffer(s);
+FluidBufAmpGate.processBlocking(s,~drum_hit,indices:~indices,rampUp:441,rampDown:4410,onThreshold:-20,offThreshold:-20);
+FluidWaveform(~drum_hit,~indices);
+)
+
+::
+strong::Basic Tests::
+code::
+
+(
+b = Buffer.sendCollection(s, Array.fill(44100,{|i| sin(i*pi/ (44100/640)) * (sin(i*pi/ 22050)).abs}));
+c = Buffer.new(s);
+)
+
+//basic tests: threshold sanity
+FluidBufAmpGate.process(s, b, indices:c, rampUp:5, rampDown:25, onThreshold:-12, offThreshold: -12)
+c.query
+c.getn(0,c.numFrames*2,{|item|item.postln;})
+
+//basic tests: threshold hysteresis
+FluidBufAmpGate.process(s, b, indices:c, rampUp:5, rampDown:25, onThreshold:-12, offThreshold: -16)
+c.query
+c.getn(0,c.numFrames*2,{|item|item.postln;})
+
+//basic tests: threshold min slice
+FluidBufAmpGate.process(s, b, indices:c, rampUp:5, rampDown:25, onThreshold:-12, offThreshold: -12, minSliceLength:441)
+c.query
+c.getn(0,c.numFrames*2,{|item|item.postln;})
+
+//basic tests: threshold min silence
+FluidBufAmpGate.process(s, b, indices:c, rampUp:5, rampDown:25, onThreshold:-12, offThreshold: -12, minSilenceLength:441)
+c.query
+c.getn(0,c.numFrames*2,{|item|item.postln;})
+
+//mid tests: threshold time hysteresis on
+FluidBufAmpGate.process(s, b, indices:c, rampUp:5, rampDown:25, onThreshold:-12, offThreshold: -12, minLengthAbove:441)
+c.query
+c.getn(0,c.numFrames*2,{|item|item.postln;})
+
+//mid tests: threshold time hysteresis off
+FluidBufAmpGate.process(s, b, indices:c, rampUp:5, rampDown:25, onThreshold:-12, offThreshold: -12, minLengthBelow:441)
+c.query
+c.getn(0,c.numFrames*2,{|item|item.postln;})
+
+//mid tests: threshold with lookBack
+FluidBufAmpGate.process(s, b, indices:c, rampUp:5, rampDown:25, onThreshold:-12, offThreshold: -12, lookBack:441)
+c.query
+c.getn(0,c.numFrames*2,{|item|item.postln;})
+
+//mid tests: threshold with lookAhead
+FluidBufAmpGate.process(s, b, indices:c, rampUp:5, rampDown:25, onThreshold:-12, offThreshold: -12, lookAhead:441)
+c.query
+c.getn(0,c.numFrames*2,{|item|item.postln;})
+
+//mid tests: threshold with asymetrical lookBack and lookAhead
+FluidBufAmpGate.process(s, b, indices:c, rampUp:5, rampDown:25, onThreshold:-12, offThreshold: -12, lookBack:221, lookAhead:441)
+c.query
+c.getn(0,c.numFrames*2,{|item|item.postln;})
+::

@@ -1,0 +1,171 @@
+TITLE:: FluidMDS
+SUMMARY:: Multidimensional Scaling
+CATEGORIES:: Libraries>FluidCorpusManipulation
+RELATED:: Classes/FluidUMAP,Classes/FluidPCA,Classes/FluidDataSet
+DESCRIPTION::
+
+    
+    Dimensionality Reduction of a LINK::Classes/FluidDataSet:: Using Multidimensional Scaling
+
+
+    
+    Multidimensional Scaling transforms a dataset to a lower number of dimensions while trying to preserve the distance relationships between the data points, so that even with fewer dimensions, the differences and similarities between points can still be observed and used effectively.
+
+    First, MDS computes a distance matrix by calculating the distance between every pair of points in the dataset. It then positions all the points in the lower number of dimensions (specified by CODE::numDimensions::) and iteratively shifts them around until the distances between all the points in the lower number of dimensions is as close as possible to the distances in the original dimensional space.
+
+    What makes this MDS implementation more flexible than some of the other dimensionality reduction algorithms in FluCoMa is that MDS allows for different measures of distance to be used (see list below).
+
+    Note that unlike the other dimensionality reduction algorithms, MDS does not have a CODE::fit:: or CODE::transform:: method, nor does it have the ability to transform data points in buffers. This is essentially because the algorithm needs to do the fit & transform as one with just the data provided in the source DataSet and therefore incorporating new data points would require a re-fitting of the model.
+
+    STRONG::Manhattan Distance::: The sum of the absolute value difference between points in each dimension. This is also called the Taxicab Metric. LINK::https://en.wikipedia.org/wiki/Taxicab_geometry::
+
+    STRONG::Euclidean Distance::: Square root of the sum of the squared differences between points in each dimension (Pythagorean Theorem) LINK::https://en.wikipedia.org/wiki/Euclidean_distance:: This metric is the default, as it is the most commonly used.
+
+    STRONG::Squared Euclidean Distance::: Square the Euclidean Distance between points. This distance measure more strongly penalises larger distances, making them seem more distant, which may reveal more clustered points. LINK::https://en.wikipedia.org/wiki/Euclidean_distance#Squared_Euclidean_distance::
+
+    STRONG::Minkowski Max Distance::: The distance between two points is reported as the largest difference between those two points in any one dimension. Also called the Chebyshev Distance or the Chessboard Distance. LINK::https://en.wikipedia.org/wiki/Chebyshev_distance::
+
+    STRONG::Minkowski Min Distance::: The distance between two points is reported as the smallest difference between those two points in any one dimension.
+
+    STRONG::Symmetric Kullback Leibler Divergence::: Because the first part of this computation uses the logarithm of the values, using the Symmetric Kullback Leibler Divergence only makes sense with non-negative data. LINK::https://en.wikipedia.org/wiki/Kullback%E2%80%93Leibler_divergence#Symmetrised_divergence::
+
+
+Read more about FluidMDS on the link::https://learn.flucoma.org/reference/mds##learn platform::.
+
+CLASSMETHODS::
+
+METHOD:: new
+
+ARGUMENT:: server 
+
+  The LINK::Classes/Server:: on which to construct this object
+ARGUMENT:: numDimensions
+
+    
+    The number of dimensions to reduce to
+
+    STRONG::Constraints::
+
+    LIST::
+    ## 
+    Minimum: CODE::1::
+
+    ::
+
+
+ARGUMENT:: distanceMetric
+
+    
+    The distance metric to use (integer 0-5)
+
+
+table::## 0 || 
+Manhattan Distance
+## 1 || 
+Euclidean Distance (default)
+## 2 || 
+Squared Euclidean Distance
+## 3 || 
+Minkowski Max Distance
+## 4 || 
+Minkowski Min Distance
+## 5 || 
+Symmetric Kullback Leibler Divergence
+::
+ 
+ 
+
+INSTANCEMETHODS::
+ 
+METHOD:: numDimensions
+
+  Property for code::numDimensions::. See CODE::new::
+
+METHOD:: distanceMetric
+
+  Property for code::distanceMetric::. See CODE::new::
+
+ METHOD:: fitTransform
+
+      
+    Fit the model to a LINK::Classes/FluidDataSet:: and write the new projected data to a destination DataSet.
+
+
+ARGUMENT:: sourceDataSet
+
+    
+    Source DataSet
+
+
+ARGUMENT:: destDataSet
+
+    
+    Destination DataSet
+
+
+ 
+ARGUMENT:: action 
+
+  A function to execute when the server has completed running fitTransform
+
+ 
+EXAMPLES::
+code::
+
+~src = Buffer.read(s,FluidFilesPath("Nicol-LoopE-M.wav"));
+
+(
+~features = Buffer(s);
+FluidBufMFCC.processBlocking(s,~src,features:~features,startCoeff:1);
+~ds = FluidDataSet(s).fromBuffer(~features);
+~ds2d = FluidDataSet(s);
+~ds2dN = FluidDataSet(s);
+FluidMDS(s).fitTransform(~ds,~ds2d);
+FluidNormalize(s).fitTransform(~ds2d,~ds2dN);
+~ds2dN.dump({
+	arg dict;
+	{FluidPlotter(bounds:Rect(0,0,800,800),dict:dict)}.defer;
+});
+)
+
+::
+strong::Comparing Distance Measures::
+
+Just looking at these plots won't really reveal the differences between these distance measures--the best way to see which might be best is to test them on your own data and listen to the musical differences they create!
+code::
+
+~src = Buffer.read(s,FluidFilesPath("Nicol-LoopE-M.wav"));
+
+(
+~features = Buffer(s);
+FluidBufMFCC.processBlocking(s,~src,features:~features,startCoeff:1);
+~ds = FluidDataSet(s).fromBuffer(~features);
+
+fork({
+	var win = Window("Comparing Distance Measures",Rect(0,0,1200,800));
+	["Manhattan","Euclidean","Squared Euclidean","Minkowski Max","Minkowski Min","Symmetric Kullback Leibler"].do{
+		arg name, dist_measure;
+		var ds_transformed = FluidDataSet(s);
+		var ds_trans_normed = FluidDataSet(s);
+		"computing distance measure: % %".format(dist_measure, name).postln;
+		FluidMDS(s,2,dist_measure).fitTransform(~ds,ds_transformed);
+		FluidNormalize(s).fitTransform(ds_transformed,ds_trans_normed);
+		ds_trans_normed.dump({
+			arg dict;
+			defer{
+				var x = (dist_measure * 400) % win.bounds.width;
+				var y = (dist_measure / 3).floor * 400;
+				FluidPlotter(win,Rect(x + 5,y + 5,390,390),dict);
+				UserView(win,Rect(x + 5,y + 5,390,390))
+				.drawFunc_{
+					Pen.stringAtPoint(name + "Distance",Point(10,10),color:Color.red);
+				};
+			};
+		});
+		s.sync;
+	};
+	win.front;
+},AppClock);
+)
+
+::

@@ -1,0 +1,209 @@
+TITLE:: FluidAmpSlice
+SUMMARY:: Amplitude-based Detrending Slicer
+CATEGORIES:: Libraries>FluidCorpusManipulation
+RELATED:: Classes/FluidBufAmpSlice,Classes/FluidAmpGate,Classes/FluidBufAmpGate,Classes/FluidOnsetSlice,Classes/FluidNoveltySlice,Classes/FluidTransientSlice,Guides/FluidCorpusManipulation
+DESCRIPTION::
+
+    
+    Implements an amplitude-based slicer, with various customisable options and conditions to detect relative amplitude changes as onsets.
+
+
+    
+    FluidAmpSlice is based on two envelope followers on a high-passed version of the signal: one slow that gives the trend, and one fast. Each has features that will interact. The example code below is unfolding the various possibilities in order of complexity.
+
+    The process will return an audio stream with single sample impulses at estimated starting points of the different slices.
+
+
+Read more about FluidAmpSlice on the link::https://learn.flucoma.org/reference/ampslice##learn platform::.
+
+CLASSMETHODS::
+
+METHOD:: ar
+
+ARGUMENT:: in 
+
+  Audio-rate signal to slice
+
+
+
+
+
+
+
+
+ARGUMENT:: fastRampUp
+
+    
+    The number of samples the relative envelope follower will take to reach the next value when raising. Typically, this will be faster than slowRampUp.
+
+    STRONG::Constraints::
+
+    LIST::
+    ## 
+    Minimum: CODE::1::
+
+    ::
+
+
+ARGUMENT:: fastRampDown
+
+    
+    The number of samples the relative envelope follower will take to reach the next value when falling. Typically, this will be faster than slowRampDown.
+
+    STRONG::Constraints::
+
+    LIST::
+    ## 
+    Minimum: CODE::1::
+
+    ::
+
+
+ARGUMENT:: slowRampUp
+
+    
+    The number of samples the absolute envelope follower will take to reach the next value when raising.
+
+    STRONG::Constraints::
+
+    LIST::
+    ## 
+    Minimum: CODE::1::
+
+    ::
+
+
+ARGUMENT:: slowRampDown
+
+    
+    The number of samples the absolute envelope follower will take to reach the next value when falling.
+
+    STRONG::Constraints::
+
+    LIST::
+    ## 
+    Minimum: CODE::1::
+
+    ::
+
+
+ARGUMENT:: onThreshold
+
+    
+    The threshold in dB of the relative envelope follower to trigger an onset, aka to go ON when in OFF state. It is computed on the difference between the two envelope followers.
+
+    STRONG::Constraints::
+
+    LIST::
+    ## 
+    Minimum: CODE::-144::
+
+    ## 
+    Maximum: CODE::144::
+
+    ::
+
+
+ARGUMENT:: offThreshold
+
+    
+    The threshold in dB of the relative envelope follower to reset, aka to allow the differential envelope to trigger again.
+
+    STRONG::Constraints::
+
+    LIST::
+    ## 
+    Minimum: CODE::-144::
+
+    ## 
+    Maximum: CODE::144::
+
+    ::
+
+
+ARGUMENT:: floor
+
+    
+    The level in dB the slowRamp needs to be above to consider a detected difference valid, allowing to ignore the slices in the noise floor.
+
+    STRONG::Constraints::
+
+    LIST::
+    ## 
+    Minimum: CODE::-144::
+
+    ## 
+    Maximum: CODE::144::
+
+    ::
+
+
+ARGUMENT:: minSliceLength
+
+    
+    The length in samples that the Slice will stay ON. Changes of states during that period will be ignored.
+
+    STRONG::Constraints::
+
+    LIST::
+    ## 
+    Minimum: CODE::0::
+
+    ::
+
+
+ARGUMENT:: highPassFreq
+
+    
+    The frequency of the fourth-order Linkwitz–Riley high-pass filter (LINK::https://en.wikipedia.org/wiki/Linkwitz%E2%80%93Riley_filter::). This is done first on the signal to minimise low frequency intermodulation with very fast ramp lengths. A frequency of 0 bypasses the filter.
+
+    STRONG::Constraints::
+
+    LIST::
+    ## 
+    Minimum: CODE::0::
+
+    ::
+
+
+ 
+ 
+
+INSTANCEMETHODS::
+  
+EXAMPLES::
+
+code::
+// detrending explained
+// Our source here is a sinewave that does not go to silence and has sharp-ish amplitude bumps as onsets we try to track
+(
+{
+            var env, source = SinOsc.ar(320,0,LFSaw.ar(20, 0, -0.4, 0.6));
+	env = FluidAmpSlice.ar(source,fastRampUp: 5,fastRampDown: 50,slowRampUp: 220,slowRampDown: 220, onThreshold: 10, offThreshold: 10,floor: -60);
+	[source, env]
+}.plot(0.08);
+)
+//beware of double trigger at the begining of the 2nd cycle above). A solution: Schmidth triggers
+(
+{var env, source = SinOsc.ar(320,0,LFSaw.ar(20, 0, -0.4, 0.6));
+	env = FluidAmpSlice.ar(source,fastRampUp: 5,fastRampDown: 50,slowRampUp: 220,slowRampDown: 220, onThreshold: 10, offThreshold: 7,floor: -60);
+	[source, env]
+}.plot(0.08);
+)
+// another solution: minslicelength
+(
+{var env, source = SinOsc.ar(320,0,LFSaw.ar(20, 0, -0.4, 0.6));
+	env = FluidAmpSlice.ar(source,fastRampUp: 5,fastRampDown: 50,slowRampUp: 220,slowRampDown: 220, onThreshold: 10, offThreshold: 7,floor: -60, minSliceLength: 441);
+	[source, env]
+}.plot(0.08);
+)
+//quick drum onsets
+//load a buffer
+b = Buffer.read(s,FluidFilesPath("Nicol-LoopE-M.wav"));
+(
+{var env, source = PlayBuf.ar(1,b);
+				env = FluidAmpSlice.ar(source,fastRampUp: 10,fastRampDown: 2205,slowRampUp: 4410,slowRampDown: 4410,onThreshold: 10,offThreshold: 5,floor: -40,minSliceLength: 4410,highPassFreq: 20);
+	[source, env]
+}.play;
+)
+::

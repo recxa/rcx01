@@ -1,0 +1,202 @@
+TITLE:: FluidBufSelect
+SUMMARY:: Select and copy specific values from a buffer
+CATEGORIES:: Libraries>FluidCorpusManipulation
+RELATED:: Classes/FluidBufSelectEvery,Classes/Buffer,Classes/BufRd,Classes/Index,Classes/IndexL
+DESCRIPTION::
+
+    
+    Copies sets of values from a buffer, described in terms of a list of frame indices and channel numbers.
+
+
+    
+
+Read more about FluidBufSelect on the link::https://learn.flucoma.org/reference/select##learn platform::.
+
+CLASSMETHODS::
+
+METHOD:: process, processBlocking
+  Processs the source LINK::Classes/Buffer:: on the LINK::Classes/Server::. CODE::processBlocking:: will execute directly in the server command FIFO, whereas CODE::process:: will delegate to a separate worker thread. The latter is generally only worthwhile for longer-running jobs where you don't wish to tie up the server.
+
+ARGUMENT:: server
+	The LINK::Classes/Server:: on which the buffers to be processed are allocated.
+
+
+
+
+
+
+
+
+ARGUMENT:: source
+
+    
+    The LINK::Classes/Buffer:: to select values from
+
+
+
+ARGUMENT:: destination
+
+    
+    The LINK::Classes/Buffer:: to write the selected data to
+
+
+
+ARGUMENT:: indices
+
+    
+    A 0-based list of frame numbers to copy. Default is [-1], meaning all frames
+
+
+
+ARGUMENT:: channels
+
+    
+    A 0-based list of channel numbers to copy. Default is [-1], meaning all channels
+
+
+
+ 
+ARGUMENT:: freeWhenDone
+  Free the server instance when processing complete. Default CODE::true::
+
+ARGUMENT:: action
+	A function to be evaluated once the offline process has finished and all Buffer's instance variables have been updated on the client side. The function will be passed CODE::[features]:: as an argument.
+
+RETURNS:: An instance of the processor
+
+METHOD:: kr
+  Trigger the equivalent behaviour to CODE::processBlocking / process:: from a LINK::Classes/Synth::. Can be useful for expressing a sequence of buffer and data processing jobs to execute. Note that the work still executes on the server command FIFO (not the audio thread), and it is the caller's responsibility to manage the sequencing, using the CODE::done:: status of the various UGens.
+
+
+
+
+
+
+
+ARGUMENT:: source
+
+    
+    The LINK::Classes/Buffer:: to select values from
+
+
+
+ARGUMENT:: destination
+
+    
+    The LINK::Classes/Buffer:: to write the selected data to
+
+
+
+ARGUMENT:: indices
+
+    
+    A 0-based list of frame numbers to copy. Default is [-1], meaning all frames
+
+
+
+ARGUMENT:: channels
+
+    
+    A 0-based list of channel numbers to copy. Default is [-1], meaning all channels
+
+
+
+ 
+ARGUMENT:: trig
+  A CODE::kr:: signal that will trigger execution
+
+ARGUMENT:: blocking
+  Whether to execute this process directly on the server command FIFO or delegate to a worker thread. See CODE::processBlocking/process:: for caveats.
+
+
+INSTANCEMETHODS::
+
+METHOD:: cancel
+  Cancels non-blocking processing
+
+METHOD:: wait
+  When called in the context of a LINK::Classes/Routine:: (it won't work otherwise), will block execution until the processor has finished. This can be convinient for writing sequences of processes more linearly than using lots of nested actions.
+  
+EXAMPLES::
+code::
+
+// a buffer with 5 frames and 3 channels,
+// where, for the values in the buffer, the tens column
+// is the channel, and the ones column is the frame
+(
+~src = Buffer.loadCollection(s,Array.fill(5,{
+	arg frame;
+	Array.fill(3,{
+		arg chan;
+		(chan * 10 ) + frame;
+	});
+}).flat,3);
+)
+
+// print it out and look to check:
+(
+~src.loadToFloatArray(action:{
+	arg fa;
+	fa = fa.clump(~src.numChannels).flop;
+	fa.do{
+		arg chan;
+		chan.postln;
+	};
+});
+)
+
+// now we'll copy out just frames 0, 2, and 3 out of channels 0 and 2
+(
+~destination = Buffer(s);
+FluidBufSelect.processBlocking(s,~src,~destination,[0,2,3],[0,2],action:{
+	~destination.loadToFloatArray(action:{
+		arg fa;
+		fa = fa.clump(~destination.numChannels).flop;
+		fa.do{
+			arg chan;
+			chan.postln;
+		};
+	});
+});
+)
+
+// also, it can rearrange channels and indices for you!
+(
+~destination = Buffer(s);
+FluidBufSelect.processBlocking(s,~src,~destination,[0,3,2],[2,0],action:{
+	~destination.loadToFloatArray(action:{
+		arg fa;
+		fa = fa.clump(~destination.numChannels).flop;
+		fa.do{
+			arg chan;
+			chan.postln;
+		};
+	});
+});
+)
+::
+strong::Curating Descriptor Data::
+code::
+
+~src = Buffer.read(s,FluidFilesPath("Tremblay-Iterative-M.wav"));
+
+(
+~descriptors = [0,1,5]; // channels for centroid, spread, and flatness
+~stats = [5,6]; // indices for mid and low percentiles (the default will be median and maximum)
+~specbuf = Buffer(s);
+~statsbuf = Buffer(s);
+~selected = Buffer(s);
+FluidBufSpectralShape.processBlocking(s,~src,features:~specbuf);
+FluidBufStats.processBlocking(s,~specbuf,stats:~statsbuf);
+FluidBufSelect.processBlocking(s,~statsbuf,~selected,~stats,~descriptors);
+~selected.loadToFloatArray(action:{
+	arg fa;
+	fa = fa.clump(~selected.numChannels).flop;
+	"\t\t\tmedian\t\t\t\tmaximum".postln;
+	["centroid","spread  ","flatness"].do{
+		arg name, i;
+		"% : %".format(name,fa[i]).postln;
+	};
+});
+)
+::

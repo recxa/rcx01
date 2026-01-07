@@ -1,0 +1,509 @@
+TITLE:: FluidBufTransients
+SUMMARY:: Buffer-Based Transient Extractor
+CATEGORIES:: Libraries>FluidCorpusManipulation
+RELATED:: Classes/FluidTransients,Classes/FluidBufHPSS,Classes/FluidBufSines,Guides/FluidCorpusManipulation
+DESCRIPTION::
+
+    
+    Separate Transients from a Signal in a Buffer
+
+
+    
+    This implements a "de-clicking" algorithm based on the assumption that a transient is a sample or series of samples that are anomalous when compared to surrounding samples. It creates a model of the time series of samples, so that when a given sample doesn't fit the model (its "error" or anomalous-ness goes above CODE::threshFwd::) it is determined to be a transient. The series of samples determined to be a transient will continue until the error goes below CODE::threshBack::, indicating that the samples are again more in-line with the model.
+
+    The algorithm then estimates what should have happened during the transient period if the signal had followed its non-anomalous path, and resynthesises this estimate to create the residual output. The transient output is CODE::input signal - residual signal::, such that summed output of the object (CODE::transients + residual::) can still null-sum with the input.
+
+    DEFINITIONLIST::
+    ## The algorithm will return two outputs:
+    || 
+    LIST::
+    ## 
+    the transients, estimated from the signal and extracted from it
+
+    ## 
+    the residual of the material with the transients replaced with an estimate.
+
+    ::
+    ::
+    The algorithm implemented is from chapter 5 of "Digital Audio Restoration" by Godsill, Simon J., Rayner, Peter J.W. with some bespoke improvements on the detection function tracking.
+
+
+Read more about FluidBufTransients on the link::https://learn.flucoma.org/reference/transients##learn platform::.
+
+CLASSMETHODS::
+
+METHOD:: process, processBlocking
+  Processs the source LINK::Classes/Buffer:: on the LINK::Classes/Server::. CODE::processBlocking:: will execute directly in the server command FIFO, whereas CODE::process:: will delegate to a separate worker thread. The latter is generally only worthwhile for longer-running jobs where you don't wish to tie up the server.
+
+ARGUMENT:: server
+	The LINK::Classes/Server:: on which the buffers to be processed are allocated.
+
+
+
+
+
+
+
+
+ARGUMENT:: source
+
+    
+    The LINK::Classes/Buffer:: to use as the source material to detect transients in. The different channels of multichannel buffers will be processed sequentially.
+
+
+
+ARGUMENT:: startFrame
+
+    
+    Where in CODE::source:: the process should begin, in samples. The default is 0.
+
+    STRONG::Constraints::
+
+    LIST::
+    ## 
+    Minimum: CODE::0::
+
+    ::
+
+
+ARGUMENT:: numFrames
+
+    
+    How many frames of CODE::source:: should be processed. The default of -1 indicates to process through the end of the buffer.
+
+
+
+ARGUMENT:: startChan
+
+    
+    For multichannel CODE::source::, which channel to begin processing from.
+
+    STRONG::Constraints::
+
+    LIST::
+    ## 
+    Minimum: CODE::0::
+
+    ::
+
+
+ARGUMENT:: numChans
+
+    
+    For multichannel CODE::source::, how many channels to process. The default of -1 indicates to process through the last channel in the buffer.
+
+
+
+ARGUMENT:: transients
+
+    
+    The buffer where the extracted transients component will written.
+
+
+
+ARGUMENT:: residual
+
+    
+    The buffer where the residual component with the transients replaced by estimates will be written.
+
+
+
+ARGUMENT:: order
+
+    
+    The number of previous samples used by the algorithm to create the model of the signal within the CODE::blockSize:: window of analysis. CODE::order:: must be less than CODE::blockSize::.
+
+    STRONG::Constraints::
+
+    LIST::
+    ## 
+    Minimum: MAX(CODE::windowSize, 10::)
+
+    ## 
+    Maximum: MIN(CODE::blockSize, 200::)
+
+    ::
+
+
+ARGUMENT:: blockSize
+
+    
+    The size of the audio block (in samples) on which the process is operating. This determines the maximum duration (in samples) of a detected transient, which cannot be more than half of CODE::blockSize - order::.
+
+    STRONG::Constraints::
+
+    LIST::
+    ## 
+    Minimum: MAX(CODE::order, 100::)
+
+    ## 
+    Maximum: CODE::4096::
+
+    ::
+
+
+ARGUMENT:: padSize
+
+    
+    The size (in samples) of analysis on each side of CODE::blockSize:: used to provide some historical context for analysis, so that each CODE::blockSize:: isn't modelled completely independently of its predecessor.
+
+    STRONG::Constraints::
+
+    LIST::
+    ## 
+    Minimum: CODE::0::
+
+    ::
+
+
+ARGUMENT:: skew
+
+    
+    The nervousness of the bespoke detection function. It ranges from -10 to 10 (it has no units) representing the strength and direction of some nonlinearity applied to the detection signal which controls how peaks are amplified or smoothed before the thresholding. High values increase the sensitivity to small variations.
+
+    STRONG::Constraints::
+
+    LIST::
+    ## 
+    Minimum: CODE::-10::
+
+    ## 
+    Maximum: CODE::10::
+
+    ::
+
+
+ARGUMENT:: threshFwd
+
+    
+    The threshold applied to the smoothed forward prediction error for determining an onset. The units are roughly in standard deviations, thus can be considered how "deviant", or anomalous, the signal must be to be detected as a transient. It allows tight identification of the start of the anomaly as it proceeds forward.
+
+    STRONG::Constraints::
+
+    LIST::
+    ## 
+    Minimum: CODE::0::
+
+    ::
+
+
+ARGUMENT:: threshBack
+
+    
+    The threshold applied to the smoothed backward prediction error for determining an offset. The units are roughly in standard deviations, thus can be considered how "deviant", or anomalous, the signal must be to be considered transient. When the smoothed error function goes below CODE::threshBack:: an offset is identified. As it proceeds backwards in time, it allows tight identification of the end of the anomaly.
+
+    STRONG::Constraints::
+
+    LIST::
+    ## 
+    Minimum: CODE::0::
+
+    ::
+
+
+ARGUMENT:: windowSize
+
+    
+    The averaging window of the error detection function. It needs smoothing as it is very jittery. The longer the window, the less precise, but the less false positive.
+
+    STRONG::Constraints::
+
+    LIST::
+    ## 
+    Minimum: CODE::0::
+
+    ## 
+    Maximum: CODE::order::
+
+    ::
+
+
+ARGUMENT:: clumpLength
+
+    
+    The window size in samples within which anomalous samples will be clumped together to avoid over-detecting in time. This is like setting a minimum transient length.
+
+    STRONG::Constraints::
+
+    LIST::
+    ## 
+    Minimum: CODE::0::
+
+    ::
+
+
+ 
+ARGUMENT:: freeWhenDone
+  Free the server instance when processing complete. Default CODE::true::
+
+ARGUMENT:: action
+	A function to be evaluated once the offline process has finished and all Buffer's instance variables have been updated on the client side. The function will be passed CODE::[features]:: as an argument.
+
+RETURNS:: An instance of the processor
+
+METHOD:: kr
+  Trigger the equivalent behaviour to CODE::processBlocking / process:: from a LINK::Classes/Synth::. Can be useful for expressing a sequence of buffer and data processing jobs to execute. Note that the work still executes on the server command FIFO (not the audio thread), and it is the caller's responsibility to manage the sequencing, using the CODE::done:: status of the various UGens.
+
+
+
+
+
+
+
+ARGUMENT:: source
+
+    
+    The LINK::Classes/Buffer:: to use as the source material to detect transients in. The different channels of multichannel buffers will be processed sequentially.
+
+
+
+ARGUMENT:: startFrame
+
+    
+    Where in CODE::source:: the process should begin, in samples. The default is 0.
+
+    STRONG::Constraints::
+
+    LIST::
+    ## 
+    Minimum: CODE::0::
+
+    ::
+
+
+ARGUMENT:: numFrames
+
+    
+    How many frames of CODE::source:: should be processed. The default of -1 indicates to process through the end of the buffer.
+
+
+
+ARGUMENT:: startChan
+
+    
+    For multichannel CODE::source::, which channel to begin processing from.
+
+    STRONG::Constraints::
+
+    LIST::
+    ## 
+    Minimum: CODE::0::
+
+    ::
+
+
+ARGUMENT:: numChans
+
+    
+    For multichannel CODE::source::, how many channels to process. The default of -1 indicates to process through the last channel in the buffer.
+
+
+
+ARGUMENT:: transients
+
+    
+    The buffer where the extracted transients component will written.
+
+
+
+ARGUMENT:: residual
+
+    
+    The buffer where the residual component with the transients replaced by estimates will be written.
+
+
+
+ARGUMENT:: order
+
+    
+    The number of previous samples used by the algorithm to create the model of the signal within the CODE::blockSize:: window of analysis. CODE::order:: must be less than CODE::blockSize::.
+
+    STRONG::Constraints::
+
+    LIST::
+    ## 
+    Minimum: MAX(CODE::windowSize, 10::)
+
+    ## 
+    Maximum: MIN(CODE::blockSize, 200::)
+
+    ::
+
+
+ARGUMENT:: blockSize
+
+    
+    The size of the audio block (in samples) on which the process is operating. This determines the maximum duration (in samples) of a detected transient, which cannot be more than half of CODE::blockSize - order::.
+
+    STRONG::Constraints::
+
+    LIST::
+    ## 
+    Minimum: MAX(CODE::order, 100::)
+
+    ## 
+    Maximum: CODE::4096::
+
+    ::
+
+
+ARGUMENT:: padSize
+
+    
+    The size (in samples) of analysis on each side of CODE::blockSize:: used to provide some historical context for analysis, so that each CODE::blockSize:: isn't modelled completely independently of its predecessor.
+
+    STRONG::Constraints::
+
+    LIST::
+    ## 
+    Minimum: CODE::0::
+
+    ::
+
+
+ARGUMENT:: skew
+
+    
+    The nervousness of the bespoke detection function. It ranges from -10 to 10 (it has no units) representing the strength and direction of some nonlinearity applied to the detection signal which controls how peaks are amplified or smoothed before the thresholding. High values increase the sensitivity to small variations.
+
+    STRONG::Constraints::
+
+    LIST::
+    ## 
+    Minimum: CODE::-10::
+
+    ## 
+    Maximum: CODE::10::
+
+    ::
+
+
+ARGUMENT:: threshFwd
+
+    
+    The threshold applied to the smoothed forward prediction error for determining an onset. The units are roughly in standard deviations, thus can be considered how "deviant", or anomalous, the signal must be to be detected as a transient. It allows tight identification of the start of the anomaly as it proceeds forward.
+
+    STRONG::Constraints::
+
+    LIST::
+    ## 
+    Minimum: CODE::0::
+
+    ::
+
+
+ARGUMENT:: threshBack
+
+    
+    The threshold applied to the smoothed backward prediction error for determining an offset. The units are roughly in standard deviations, thus can be considered how "deviant", or anomalous, the signal must be to be considered transient. When the smoothed error function goes below CODE::threshBack:: an offset is identified. As it proceeds backwards in time, it allows tight identification of the end of the anomaly.
+
+    STRONG::Constraints::
+
+    LIST::
+    ## 
+    Minimum: CODE::0::
+
+    ::
+
+
+ARGUMENT:: windowSize
+
+    
+    The averaging window of the error detection function. It needs smoothing as it is very jittery. The longer the window, the less precise, but the less false positive.
+
+    STRONG::Constraints::
+
+    LIST::
+    ## 
+    Minimum: CODE::0::
+
+    ## 
+    Maximum: CODE::order::
+
+    ::
+
+
+ARGUMENT:: clumpLength
+
+    
+    The window size in samples within which anomalous samples will be clumped together to avoid over-detecting in time. This is like setting a minimum transient length.
+
+    STRONG::Constraints::
+
+    LIST::
+    ## 
+    Minimum: CODE::0::
+
+    ::
+
+
+ 
+ARGUMENT:: trig
+  A CODE::kr:: signal that will trigger execution
+
+ARGUMENT:: blocking
+  Whether to execute this process directly on the server command FIFO or delegate to a worker thread. See CODE::processBlocking/process:: for caveats.
+
+
+INSTANCEMETHODS::
+
+METHOD:: cancel
+  Cancels non-blocking processing
+
+METHOD:: wait
+  When called in the context of a LINK::Classes/Routine:: (it won't work otherwise), will block execution until the processor has finished. This can be convinient for writing sequences of processes more linearly than using lots of nested actions.
+  
+EXAMPLES::
+
+code::
+
+~src = Buffer.read(s,FluidFilesPath("Tremblay-AaS-SynthTwoVoices-M.wav"));
+
+(
+~transients = Buffer(s);
+~residual = Buffer(s);
+FluidBufTransients.processBlocking(s,~src,transients:~transients,residual:~residual,action:{
+	"done".postln;
+});
+)
+
+// only transients
+(
+{
+	var sig = PlayBuf.ar(1,~transients,BufRateScale.ir(~transients),doneAction:2);
+	sig.dup;
+}.play;
+)
+
+// juicy clicks
+(
+{
+	var sig = PlayBuf.ar(1,~transients,BufRateScale.ir(~transients) * 6,doneAction:2);
+	sig.dup;
+}.play;
+)
+
+// transients removed
+(
+{
+	var sig = PlayBuf.ar(1,~residual,BufRateScale.ir(~residual),doneAction:2);
+	sig.dup;
+}.play;
+)
+::
+strong::Comparing the source to the outputs::
+code::
+
+~src = Buffer.read(s,FluidFilesPath("Tremblay-AaS-SynthTwoVoices-M.wav"),0,44100 * 2);
+
+(
+~transients = Buffer(s);
+~residual = Buffer(s);
+~compare = Buffer(s);
+FluidBufTransients.processBlocking(s,~src,transients:~transients,residual:~residual,order:30,threshFwd:1);
+FluidBufCompose.processBlocking(s,~src,destination:~compare,destStartChan:0);
+FluidBufCompose.processBlocking(s,~transients,destination:~compare,destStartChan:1);
+FluidBufCompose.processBlocking(s,~residual,destination:~compare,destStartChan:2);
+FluidWaveform(~compare,bounds:Rect(0,0,1600,1200));
+)
+::

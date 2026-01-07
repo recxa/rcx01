@@ -1,0 +1,366 @@
+TITLE:: FluidGrid
+SUMMARY:: Constrain a 2D DataSet into a Grid.
+CATEGORIES:: Libraries>FluidCorpusManipulation
+RELATED:: Classes/FluidUMAP,Classes/FluidMDS,Classes/FluidPCA,Classes/FluidDataSet
+DESCRIPTION::
+
+    
+    Maps a set of 2D points in a LINK::Classes/FluidDataSet:: to a rectangular grid.
+
+
+    
+    LINK::Classes/FluidGrid:: transforms a two-dimensional dataset into a grid using a variant of the Jonker-Volgenant algorithm (LINK::https://www.gwern.net/docs/statistics/decision/1987-jonker.pdf::). This can be useful to generate compact grid layouts from the output of dimensionality reduction algorithms such as LINK::Classes/FluidUMAP::, LINK::Classes/FluidPCA:: or LINK::Classes/FluidMDS:: and for making uniformly distributed spaces out of any two-dimensional dataset.
+
+    This approach is similar to projects like CloudToGrid ( LINK::https://github.com/kylemcdonald/CloudToGrid/:: ), RasterFairy ( LINK::https://github.com/Quasimondo/RasterFairy:: ) or IsoMatch ( LINK::https://github.com/ohadf/isomatch:: ).
+
+
+Read more about FluidGrid on the link::https://learn.flucoma.org/reference/grid##learn platform::.
+
+CLASSMETHODS::
+
+METHOD:: new
+
+ARGUMENT:: server 
+
+  The LINK::Classes/Server:: on which to construct this object
+ARGUMENT:: oversample
+
+    
+    A factor to oversample the destination grid. The default is 1, so the grid has the same number of points as the input. Factors of 2 or more will allow a larger destination grid, which will respect the original shape a little more, but will also be sparser.
+
+    STRONG::Constraints::
+
+    LIST::
+    ## 
+    Minimum: CODE::1::
+
+    ::
+
+
+ARGUMENT:: extent
+
+    
+    The size to which the selected axis will be constrained. The default is 0, which turns the constraints off.
+
+    STRONG::Constraints::
+
+    LIST::
+    ## 
+    Minimum: CODE::0::
+
+    ::
+
+
+ARGUMENT:: axis
+
+    
+    The axis to which the extent constraint is applied. The default 0 is horizontal, and 1 is vertical.
+
+
+
+ 
+ 
+
+INSTANCEMETHODS::
+ 
+METHOD:: oversample
+
+  Property for code::oversample::. See CODE::new::
+
+METHOD:: extent
+
+  Property for code::extent::. See CODE::new::
+
+METHOD:: axis
+
+  Property for code::axis::. See CODE::new::
+
+ METHOD:: fitTransform
+
+      
+    Fit the model to a LINK::Classes/FluidDataSet:: and write the new projected data to a destination FluidDataSet.
+
+
+ARGUMENT:: sourceDataSet
+
+    
+    Source data, or the DataSet name
+
+
+ARGUMENT:: destDataSet
+
+    
+    Destination data, or the DataSet name
+
+
+ 
+ARGUMENT:: action 
+
+  A function to execute when the server has completed running fitTransform
+
+ 
+EXAMPLES::
+code::
+
+(
+// peek at a didactic dataset (color is just to track better where the points end up)
+~ds = FluidDataSet(s).read(FluidFilesPath("../Data/moon.json"));
+~colors = Dictionary.new;
+~ds.dump({
+	arg dict;
+	dict["data"].keysValuesDo{
+		arg k, v;
+		var hsl = Color.hsv(v[0],1,0.5);
+		~colors[k] = Color(v[0],v[1],hsl.red);
+	};
+
+	defer{
+		var fp = FluidPlotter(dict:dict);
+		~colors.keysValuesDo{
+			arg k, v;
+			fp.pointColor_(k,v);
+		};
+		fp.pointSizeScale_(3);
+	};
+});
+)
+
+// now gridify it
+(
+~ds_gridded = FluidDataSet(s);
+~grid = FluidGrid(s).fitTransform(~ds,~ds_gridded);
+
+// by default it is not normalized, so we'll do that before
+// sending it to plotter
+FluidNormalize(s).fitTransform(~ds_gridded,~ds_gridded);
+
+~ds.dump({
+	arg original;
+	~ds_gridded.dump({
+		arg gridded;
+		defer{
+			var win = Window(bounds:Rect(0,0,1000,500));
+			var fps = [original,gridded].collect{
+				arg dict;
+				var fp = FluidPlotter(dict:dict,standalone:false);
+				~colors.keysValuesDo{
+					arg k, v;
+					fp.pointColor_(k,v);
+				};
+				fp.pointSizeScale_(3);
+				fp;
+			};
+			win.layout_(HLayout(*fps));
+			win.front;
+		};
+	});
+});
+)
+::
+strong::Oversampling::
+code::
+
+// if we added an oversampling of 4 to the example above,
+// there will be 4x as many points on the grid as there are
+// in the dataset. they don't all get used, so we can still
+// see some of the original shape
+(
+~ds_gridded = FluidDataSet(s);
+~grid = FluidGrid(s,4).fitTransform(~ds,~ds_gridded);
+
+// by default it is not normalized, so we'll do that before
+// sending it to plotter
+FluidNormalize(s).fitTransform(~ds_gridded,~ds_gridded);
+
+~ds.dump({
+	arg original;
+	~ds_gridded.dump({
+		arg gridded;
+		defer{
+			var win = Window(bounds:Rect(0,0,1000,500));
+			var fps = [original,gridded].collect{
+				arg dict;
+				var fp = FluidPlotter(dict:dict,standalone:false);
+				~colors.keysValuesDo{
+					arg k, v;
+					fp.pointColor_(k,v);
+				};
+				fp.pointSizeScale_(3);
+				fp;
+			};
+			win.layout_(HLayout(*fps));
+			win.front;
+		};
+	});
+});
+)
+
+::
+strong::Axis and Extent::
+code::
+
+// by adding an extent of 5 to axis 0, we get 5 columns:
+(
+~ds_gridded = FluidDataSet(s);
+~grid = FluidGrid(s,oversample:1,extent:5,axis:0).fitTransform(~ds,~ds_gridded);
+
+// by default it is not normalized, so we'll do that before
+// sending it to plotter
+FluidNormalize(s).fitTransform(~ds_gridded,~ds_gridded);
+
+~ds.dump({
+	arg original;
+	~ds_gridded.dump({
+		arg gridded;
+		defer{
+			var win = Window(bounds:Rect(0,0,1000,500));
+			var fps = [original,gridded].collect{
+				arg dict;
+				var fp = FluidPlotter(dict:dict,standalone:false);
+				~colors.keysValuesDo{
+					arg k, v;
+					fp.pointColor_(k,v);
+				};
+				fp.pointSizeScale_(3);
+				fp;
+			};
+			win.layout_(HLayout(*fps));
+			win.front;
+		};
+	});
+});
+)
+
+
+// different settings
+(
+~ds_gridded = FluidDataSet(s);
+~grid = FluidGrid(s,oversample:1,extent:7,axis:1).fitTransform(~ds,~ds_gridded);
+
+// by default it is not normalized, so we'll do that before
+// sending it to plotter
+FluidNormalize(s).fitTransform(~ds_gridded,~ds_gridded);
+
+~ds.dump({
+	arg original;
+	~ds_gridded.dump({
+		arg gridded;
+		defer{
+			var win = Window(bounds:Rect(0,0,1000,500));
+			var fps = [original,gridded].collect{
+				arg dict;
+				var fp = FluidPlotter(dict:dict,standalone:false);
+				~colors.keysValuesDo{
+					arg k, v;
+					fp.pointColor_(k,v);
+				};
+				fp.pointSizeScale_(3);
+				fp;
+			};
+			win.layout_(HLayout(*fps));
+			win.front;
+		};
+	});
+});
+)
+
+// this can also be over sampled:
+(
+~ds_gridded = FluidDataSet(s);
+~grid = FluidGrid(s,oversample:12,extent:6,axis:0).fitTransform(~ds,~ds_gridded);
+
+// by default it is not normalized, so we'll do that before
+// sending it to plotter
+FluidNormalize(s).fitTransform(~ds_gridded,~ds_gridded);
+
+~ds.dump({
+	arg original;
+	~ds_gridded.dump({
+		arg gridded;
+		defer{
+			var win = Window(bounds:Rect(0,0,1000,500));
+			var fps = [original,gridded].collect{
+				arg dict;
+				var fp = FluidPlotter(dict:dict,standalone:false);
+				~colors.keysValuesDo{
+					arg k, v;
+					fp.pointColor_(k,v);
+				};
+				fp.pointSizeScale_(3);
+				fp;
+			};
+			win.layout_(HLayout(*fps));
+			win.front;
+		};
+	});
+});
+)
+::
+strong::With Sound::
+
+Using link::Classes/FluidUMAP:: to dimensionally reduce 13 dimensions of link::Classes/FluidBufMFCC:: analyses down to two dimensions, play with each of the plots and see which is more musically expressive. Each has it's strenghts and weaknesses!
+code::
+
+~src = Buffer.readChannel(s,FluidFilesPath("Green-Box641.wav"),channels:[0]);
+
+// make a dataset of MFCC analyses all 100 ms long, the id is the sample it starts at
+(
+var mfccs = Buffer(s);
+var stats = Buffer(s);
+var flat = Buffer(s);
+var currentSample = 0;
+var hopSamples = ~src.sampleRate * 0.1;
+~ds = FluidDataSet(s);
+while({
+	(currentSample + hopSamples) < ~src.numFrames;
+},{
+	FluidBufMFCC.processBlocking(s,~src,currentSample,hopSamples,startCoeff:1,features:mfccs);
+	FluidBufStats.processBlocking(s,mfccs,stats:stats,select:[\mid]);
+	FluidBufFlatten.processBlocking(s,stats,destination:flat);
+	~ds.addPoint(currentSample.asInteger,flat);
+	currentSample = currentSample + hopSamples;
+});
+~ds.print;
+)
+
+// do the data stuff
+(
+~ds_umap = FluidDataSet(s);
+FluidUMAP(s,2,15,0.5).fitTransform(~ds,~ds_umap); // reduce 13 dimensions to 2 dimensions
+FluidNormalize(s).fitTransform(~ds_umap,~ds_umap); // normalize it so it plots nicely
+~ds_grid = FluidDataSet(s);
+FluidGrid(s).fitTransform(~ds_umap,~ds_grid); // gridify it into another dataset
+FluidNormalize(s).fitTransform(~ds_grid,~ds_grid); // normalize that too so it plots nicely
+~win = Window(bounds:Rect(0,0,1000,500));
+[~ds_umap,~ds_grid].do{
+	arg ds, i;
+	ds.dump({
+		arg dict;
+		var buf = Buffer.alloc(s,2);
+		var tree = FluidKDTree(s).fit(ds);
+		var last = nil;
+		defer{
+			FluidPlotter(~win,Rect((i*500) + 10,10,480,480),dict,{
+				arg view, x, y;
+				buf.setn(0,[x,y]);
+				tree.kNearest(buf,1,{
+					arg id;
+					if(id != last){
+						last = id;
+						view.highlight_(id);
+						{
+							var sig = PlayBuf.ar(1,~src,BufRateScale.ir(~src),1,id.asInteger);
+							var env = EnvGen.kr(Env([0,1,1,0],[0.02,0.06,0.02]),doneAction:2);
+							sig.dup * env;
+						}.play;
+					};
+				});
+			},standalone:false);
+		}
+	});
+};
+~win.front;
+)
+
+
+::

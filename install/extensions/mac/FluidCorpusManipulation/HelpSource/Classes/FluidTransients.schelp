@@ -1,0 +1,232 @@
+TITLE:: FluidTransients
+SUMMARY:: Realtime Transient Modeller and Extractor
+CATEGORIES:: Libraries>FluidCorpusManipulation
+RELATED:: Classes/FluidBufTransients,Classes/FluidSines,Classes/FluidHPSS,Guides/FluidCorpusManipulation
+DESCRIPTION::
+
+    
+    Separate transients from a signal.
+
+
+    
+    This implements a "de-clicking" algorithm based on the assumption that a transient is a sample or series of samples that are anomalous when compared to surrounding samples. It creates a model of the time series of samples, so that when a given sample doesn't fit the model (its "error" or anomalous-ness goes above CODE::threshFwd::) it is determined to be a transient. The series of samples determined to be a transient will continue until the error goes below CODE::threshBack::, indicating that the samples are again more in-line with the model.
+
+    The algorithm then estimates what should have happened during the transient period if the signal had followed its non-anomalous path, and resynthesises this estimate to create the residual output. The transient output is CODE::input signal - residual signal::, such that the summed output of the object (CODE::transients + residual::) can null-sum with the input.
+
+    DEFINITIONLIST::
+    ## The algorithm will take an audio in, and will divide it in two outputs:
+    || 
+    LIST::
+    ## 
+    the transients, estimated from the signal and extracted from it
+
+    ## 
+    the residual of the material with the transients replaced with an estimate.
+
+    ::
+    ::
+    The algorithm implemented is from chapter 5 of "Digital Audio Restoration" by Godsill, Simon J., Rayner, Peter J.W. with some bespoke improvements on the detection function tracking.
+
+
+Read more about FluidTransients on the link::https://learn.flucoma.org/reference/transients##learn platform::.
+
+CLASSMETHODS::
+
+METHOD:: ar
+
+ARGUMENT:: in
+The audio to be processed.
+
+
+
+
+
+
+
+
+ARGUMENT:: order
+
+    
+    The number of previous samples used by the algorithm to create the model of the signal within the CODE::blockSize:: window of analysis. CODE::order:: must be less than CODE::blockSize::.
+
+    STRONG::Constraints::
+
+    LIST::
+    ## 
+    Minimum: MAX(CODE::windowSize, 10::)
+
+    ## 
+    Maximum: MIN(CODE::blockSize, 200::)
+
+    ::
+
+
+ARGUMENT:: blockSize
+
+    
+    The size of audio block (in samples) on which the process is operating. This determines the maximum duration (in samples) of a detected transient, which cannot be more than half of CODE::blockSize - order::. High values are more cpu intensive.
+
+    STRONG::Constraints::
+
+    LIST::
+    ## 
+    Minimum: MAX(CODE::order, 100::)
+
+    ## 
+    Maximum: CODE::4096::
+
+    ::
+
+
+ARGUMENT:: padSize
+
+    
+    The size (in samples) of analysis on each side of CODE::blockSize:: used to provide some historical context for analysis, so that each CODE::blockSize:: isn't modelled completely independently of its predecessor.
+
+    STRONG::Constraints::
+
+    LIST::
+    ## 
+    Minimum: CODE::0::
+
+    ::
+
+
+ARGUMENT:: skew
+
+    
+    The nervousness of the bespoke detection function. It ranges from -10 to 10 (it has no units) representing the strength and direction of some nonlinearity applied to the detection signal which controls how peaks are amplified or smoothed before the thresholding. High values increase the sensitivity to small variations.
+
+    STRONG::Constraints::
+
+    LIST::
+    ## 
+    Minimum: CODE::-10::
+
+    ## 
+    Maximum: CODE::10::
+
+    ::
+
+
+ARGUMENT:: threshFwd
+
+    
+    The threshold applied to the smoothed forward prediction error for determining an onset. The units are roughly in standard deviations, thus can be considered how "deviant", or anomalous, the signal must be to be detected as a transient. It allows tight identification of the start of the anomaly as it proceeds forward.
+
+    STRONG::Constraints::
+
+    LIST::
+    ## 
+    Minimum: CODE::0::
+
+    ::
+
+
+ARGUMENT:: threshBack
+
+    
+    The threshold applied to the smoothed backward prediction error for determining an offset. The units are roughly in standard deviations, thus can be considered how "deviant", or anomalous, the signal must be to be considered transient. When the smoothed error function goes below CODE::threshBack:: an offset is identified. As it proceeds backwards in time, it allows tight identification of the end of the anomaly.
+
+    STRONG::Constraints::
+
+    LIST::
+    ## 
+    Minimum: CODE::0::
+
+    ::
+
+
+ARGUMENT:: windowSize
+
+    
+    The averaging window of the error detection function. It needs smoothing as it is very jittery. The longer the window, the less precise, but the less false positive.
+
+    STRONG::Constraints::
+
+    LIST::
+    ## 
+    Minimum: CODE::0::
+
+    ## 
+    Maximum: CODE::order::
+
+    ::
+
+
+ARGUMENT:: clumpLength
+
+    
+    The window size in samples within which anomalous samples will be clumped together to avoid over-detecting in time. This is like setting a minimum transient length.
+
+    STRONG::Constraints::
+
+    LIST::
+    ## 
+    Minimum: CODE::0::
+
+    ::
+
+
+ 
+ 
+
+INSTANCEMETHODS::
+  
+EXAMPLES::
+
+CODE::
+
+~src = Buffer.read(s,FluidFilesPath("Tremblay-AaS-SynthTwoVoices-M.wav"));
+
+// hear the basic parameters: transients in the L channel, residual in the R channel
+(
+{
+	FluidTransients.ar(PlayBuf.ar(1, ~src, loop:1));
+}.play
+)
+
+// tweaking parameters: listen while adjusting order and skew
+(
+{
+	var sig = PlayBuf.ar(1, ~src, loop:1);
+	var order = MouseX.kr(10,80).poll(label:"order");
+	var skew = MouseY.kr(-10,10).poll(label:"skew");
+	FluidTransients.ar(sig,order,skew:skew)[0].dup
+}.play;
+)
+
+::
+strong::adding some FX::
+code::
+(
+{
+	var sig = PlayBuf.ar(1, ~src, loop:1);
+	var transients, residual;
+	# transients, residual = FluidTransients.ar(sig);
+	transients = Pan2.ar(transients,TRand.ar(-1.0,1.0,transients),8.dbamp);
+	transients = AllpassC.ar(transients,30.reciprocal,TRand.ar(100.reciprocal,30.reciprocal,transients),8);
+	sig = residual.dup + transients;
+	sig;
+}.play
+)
+::
+strong::The transients and residual null-sum::
+code::
+
+// null test (the process adds a latency of ((blockSize + padding) - order) samples)
+// this should be silent!
+(
+{
+	var sig = PlayBuf.ar(1, ~src, loop:1);
+	var transients, residual, summed;
+	var order = 20; // this is the default
+	var blockSize = 256; // this is the default
+	var padSize = 128; // this is the default;
+	# transients, residual = FluidTransients.ar(sig,order,blockSize,padSize);
+	summed = [transients, residual].sum;
+	sig = DelayN.ar(sig, 1, ((blockSize + padSize) - order) * SampleDur.ir);
+	sig - summed;
+}.play
+)
+::

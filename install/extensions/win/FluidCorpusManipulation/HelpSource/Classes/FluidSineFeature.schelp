@@ -1,0 +1,166 @@
+TITLE:: FluidSineFeature
+SUMMARY:: Sinusoidal Peak Tracking
+CATEGORIES:: Libraries>FluidCorpusManipulation
+RELATED:: Classes/FluidBufSineFeature,Classes/FluidSines,Guides/FluidCorpusManipulation,Classes/SinOsc
+DESCRIPTION::
+
+    
+    Interpolated Sinusoidal Peak Tracking on the Spectrum.
+
+
+    
+    This process is tracking peaks in the spectrum, then estimating an interpolated frequency and amplitude of that peak in relation to its spectral context. It is the first part of the process used by LINK::Classes/FluidSines::.
+
+
+Read more about FluidSineFeature on the link::https://learn.flucoma.org/reference/sinefeature##learn platform::.
+
+CLASSMETHODS::
+
+METHOD:: kr
+
+ARGUMENT:: in
+
+  Audio-rate signal to analyze
+
+
+
+
+
+
+
+
+ARGUMENT:: numPeaks
+
+    
+    The number of peaks to search report back. It is capped at (fftSize / 2) + 1.
+
+    STRONG::Constraints::
+
+    LIST::
+    ## 
+    Minimum: CODE::1::
+
+    ## 
+    Maximum: MIN(CODE::(FFT Size / 2) + 1 (see fft settings), maxnumPeaks::)
+
+    ::
+
+
+ARGUMENT:: detectionThreshold
+
+    
+    The threshold in dB above which a magnitude peak is considered to be a sinusoidal component.
+
+    STRONG::Constraints::
+
+    LIST::
+    ## 
+    Minimum: CODE::-144::
+
+    ## 
+    Maximum: CODE::0::
+
+    ::
+
+
+ARGUMENT:: order
+
+    
+    How the reported peaks are to be ordered. By default (0), it is by frequencies (lowest first), and the alternative (1) is by magnitude (loudest first).
+
+
+
+ARGUMENT:: freqUnit
+
+    
+    The units and scale used to report the frequency of the peaks. By default (0), it is in Hz (linear), and the alternative (1) is in MIDI (logarithmic).
+
+
+
+ARGUMENT:: magUnit
+
+    
+    The units and scale used to report the magnitude of the peaks. By default (0), it is in amp (linear), and the alternative (1) is in dB (logarithmic).
+
+
+
+ARGUMENT:: windowSize
+
+    
+    The window size. As sinusoidal estimation relies on spectral frames, we need to decide what precision we give it spectrally and temporally. For more information visit LINK::https://learn.flucoma.org/learn/fourier-transform/::
+
+
+
+ARGUMENT:: hopSize
+
+    
+    The window hop size. As sinusoidal estimation relies on spectral frames, we need to move the window forward. It can be any size, but low overlap will create audible artefacts. The -1 default value will default to half of windowSize (overlap of 2).
+
+
+
+ARGUMENT:: fftSize
+
+    
+    The inner FFT/IFFT size. It should be at least 4 samples long, at least the size of the window, and a power of 2. Making it larger allows an oversampling of the spectral precision. The -1 default value will default to windowSize. The -1 default value will default to the highest of windowSize and (bandwidth - 1) * 2.
+
+
+
+ARGUMENT:: maxFFTSize
+
+    
+    Set an explicit upper bound on the FFT size at object instantiation. The default of CODE::nil:: or -1 sets this to whatever the initial FFT size is
+
+
+
+ARGUMENT:: maxNumPeaks
+
+    
+    Manually sets a maximum value for CODE::numPeaks::. Can only be set at object instantiation. Default value of -1 sets this to the initial value of CODE::numPeaks::
+
+
+
+ 
+ 
+
+RETURNS::     
+    An array of two control streams: [0] is the interpolated frequency of the peaks extracted in Hz or MIDI, [1] is their respective magnitudes in amp or dB. The latency between the input and the output is windowSize samples.
+
+
+
+INSTANCEMETHODS::
+  
+EXAMPLES::
+
+CODE::
+
+// a didactic example: a cluster of sinusoids, sorted by magnitudes
+{var source = SinOsc.ar([440,789],mul: [0.05,0.1]).sum; FluidSineFeature.kr(source,numPeaks: 3, order: 1).poll; source.dup}.play
+
+// or in MIDI and dB
+{var source = SinOsc.ar([69,79].midicps,mul: [-40,-35].dbamp).sum; FluidSineFeature.kr(source,numPeaks: 3, order: 1, freqUnit: 1, magUnit: 1).poll; source.dup}.play
+
+// a more exciting example: resynthesizing audio input
+(
+var buf = Buffer.read(s,FluidFilesPath("Harker-DS-TenOboeMultiphonics-M.wav"));
+
+x = {
+	arg nbPeaks = 10, t_hold = 1;
+	var source = PlayBuf.ar(1, buf, loop: 1);
+	var analysis = Latch.kr(FluidSineFeature.kr(source,numPeaks: nbPeaks, maxNumPeaks: 50),t_hold);
+	var resynth = SinOsc.ar(analysis[0], mul: analysis[1]).sum;
+	[source, resynth];
+}.play
+)
+
+// play with the number of peaks to track
+x.set(\nbPeaks, 5)
+x.set(\nbPeaks, 1)
+x.set(\nbPeaks, 50)
+
+// trigger the holder to hear the reconstruction on the right hand side
+x.set(\t_hold, 1)
+
+// or make it automatic
+r = Routine{x.set(\t_hold, 1);0.01.wait;}.loop.play
+r.stop
+::

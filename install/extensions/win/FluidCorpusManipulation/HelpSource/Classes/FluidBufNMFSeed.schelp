@@ -1,0 +1,323 @@
+TITLE:: FluidBufNMFSeed
+SUMMARY:: Non-Negative Double Singular Value Decomposition on a Buffer
+CATEGORIES:: Libraries>FluidCorpusManipulation
+RELATED:: Classes/FluidBufNMF,Classes/FluidNMFMatch,Classes/FluidNMFFilter
+DESCRIPTION::
+
+    
+    Find Initial Bases and Activations for BufNMF
+
+
+    
+    BufNMFSeed uses Nonnegative Double Singular Value Decomposition which can help decide how to initialise BufNMF, by suggesting how many components to request (and what bases and activations to seed) in order to account for a certain percentage of the variance in a buffer. In general, using this process to seed a BufNMF decomposition should substantially increase the speed with which BufNMF converges and avoid especially poor local minima.
+
+    See LINK::http://nimfa.biolab.si/nimfa.methods.seeding.nndsvd.html:: and LINK::https://www.sciencedirect.com/science/article/abs/pii/S0031320307004359:: for more info.
+
+
+Read more about FluidBufNMFSeed on the link::https://learn.flucoma.org/reference/bufnmfseed##learn platform::.
+
+CLASSMETHODS::
+
+METHOD:: process, processBlocking
+  Processs the source LINK::Classes/Buffer:: on the LINK::Classes/Server::. CODE::processBlocking:: will execute directly in the server command FIFO, whereas CODE::process:: will delegate to a separate worker thread. The latter is generally only worthwhile for longer-running jobs where you don't wish to tie up the server.
+
+ARGUMENT:: server
+	The LINK::Classes/Server:: on which the buffers to be processed are allocated.
+
+
+
+
+
+
+
+
+ARGUMENT:: source
+
+    
+    The LINK::Classes/Buffer:: to analyse and suggest a number of components for.
+
+
+
+ARGUMENT:: bases
+
+    
+    The LINK::Classes/Buffer:: where the bases will be written to. These bases are suggested seeds for a BufNMF process. The number of bases (i.e., channels) in this buffer when the process is complete is the number of components needed to cover the requested percentage of variance in the buffer.
+
+
+
+ARGUMENT:: activations
+
+    
+    The LINK::Classes/Buffer:: where the activations will be written to. These bases are suggested seeds for a BufNMF process. The number of bases (i.e., channels) in this buffer when the process is complete is the number of components needed to cover the requested percentage of variance in the buffer.
+
+
+
+ARGUMENT:: minComponents
+
+    
+    Minimum number of estimated components to return (minimum number of channels in CODE::bases:: LINK::Classes/Buffer:: when the process is complete)
+
+    STRONG::Constraints::
+
+    LIST::
+    ## 
+    Minimum: CODE::1::
+
+    ## 
+    Maximum: CODE::maxComponents::
+
+    ::
+
+
+ARGUMENT:: maxComponents
+
+    
+    Maximum number of estimated components to return (maximum number of channels in CODE::bases:: LINK::Classes/Buffer:: when the process is complete)
+
+    STRONG::Constraints::
+
+    LIST::
+    ## 
+    Minimum: MAX(CODE::minComponents, 1::)
+
+    ::
+
+
+ARGUMENT:: coverage
+
+    
+    Fraction (0 to 1) of information preserved in the decomposition
+
+    STRONG::Constraints::
+
+    LIST::
+    ## 
+    Minimum: CODE::0::
+
+    ## 
+    Maximum: CODE::1::
+
+    ::
+
+
+ARGUMENT:: method
+
+    
+    The method used to account for certain values before processing. Zeros in the matrix will remain zero when "updated" because the updates are being multiplied by a scalar, therefore it may be useful to change any zeros to something else before the process. Options are:
+
+
+table::## 0 || 
+STRONG::NMF-SVD:: Nonnegative Double Singular Value Decomposition where any negative values are first converted to their absolute value. This is likely to be quicker than the other options, but less rigorous.
+## 1 || 
+STRONG::NNDSVDar:: Nonnegative Double Singular Value Decomposition where any elements that are zero are first filled with a random value between 0 and the CODE::average * 0.01:: (essentially small random values). This may be slightly faster but slightly less accurate than other options.
+## 2 || 
+STRONG::NNDSVDa:: Nonnegative Double Singular Value Decomposition where any elements that are zero are first filled with the average value.
+## 3 || 
+STRONG::NNDSVD:: Nonnegative Double Singular Value Decomposition where values are not changed according to any criteria. This promotes sparse results from the subsequent NMF (because, with multiplicative updates, zeros remain zeros). This may or may not be desirable (not least because sparsity implies the need for more components, but also the specific domain might imply that reasonable decomposition just isn't going to be sparse).
+::
+ARGUMENT:: windowSize
+
+    
+    The window size. We need to decide what precision we give it spectrally and temporally. For more information visit LINK::https://learn.flucoma.org/learn/fourier-transform/::
+
+
+
+ARGUMENT:: hopSize
+
+    
+    The window hop size. It can be any size, but low overlap will create audible artefacts. The -1 default value will default to half of windowSize (overlap of 2).
+
+
+
+ARGUMENT:: fftSize
+
+    
+    The inner FFT/IFFT size. It should be at least 4 samples long, at least the size of the window, and a power of 2. Making it larger allows an oversampling of the spectral precision. The -1 default value will use the next power of 2 equal or above the highest of windowSize and (bandwidth - 1) * 2.
+
+
+
+ 
+ARGUMENT:: freeWhenDone
+  Free the server instance when processing complete. Default CODE::true::
+
+ARGUMENT:: action
+	A function to be evaluated once the offline process has finished and all Buffer's instance variables have been updated on the client side. The function will be passed CODE::[features]:: as an argument.
+
+RETURNS:: An instance of the processor
+
+METHOD:: kr
+  Trigger the equivalent behaviour to CODE::processBlocking / process:: from a LINK::Classes/Synth::. Can be useful for expressing a sequence of buffer and data processing jobs to execute. Note that the work still executes on the server command FIFO (not the audio thread), and it is the caller's responsibility to manage the sequencing, using the CODE::done:: status of the various UGens.
+
+
+
+
+
+
+
+ARGUMENT:: source
+
+    
+    The LINK::Classes/Buffer:: to analyse and suggest a number of components for.
+
+
+
+ARGUMENT:: bases
+
+    
+    The LINK::Classes/Buffer:: where the bases will be written to. These bases are suggested seeds for a BufNMF process. The number of bases (i.e., channels) in this buffer when the process is complete is the number of components needed to cover the requested percentage of variance in the buffer.
+
+
+
+ARGUMENT:: activations
+
+    
+    The LINK::Classes/Buffer:: where the activations will be written to. These bases are suggested seeds for a BufNMF process. The number of bases (i.e., channels) in this buffer when the process is complete is the number of components needed to cover the requested percentage of variance in the buffer.
+
+
+
+ARGUMENT:: minComponents
+
+    
+    Minimum number of estimated components to return (minimum number of channels in CODE::bases:: LINK::Classes/Buffer:: when the process is complete)
+
+    STRONG::Constraints::
+
+    LIST::
+    ## 
+    Minimum: CODE::1::
+
+    ## 
+    Maximum: CODE::maxComponents::
+
+    ::
+
+
+ARGUMENT:: maxComponents
+
+    
+    Maximum number of estimated components to return (maximum number of channels in CODE::bases:: LINK::Classes/Buffer:: when the process is complete)
+
+    STRONG::Constraints::
+
+    LIST::
+    ## 
+    Minimum: MAX(CODE::minComponents, 1::)
+
+    ::
+
+
+ARGUMENT:: coverage
+
+    
+    Fraction (0 to 1) of information preserved in the decomposition
+
+    STRONG::Constraints::
+
+    LIST::
+    ## 
+    Minimum: CODE::0::
+
+    ## 
+    Maximum: CODE::1::
+
+    ::
+
+
+ARGUMENT:: method
+
+    
+    The method used to account for certain values before processing. Zeros in the matrix will remain zero when "updated" because the updates are being multiplied by a scalar, therefore it may be useful to change any zeros to something else before the process. Options are:
+
+
+table::## 0 || 
+STRONG::NMF-SVD:: Nonnegative Double Singular Value Decomposition where any negative values are first converted to their absolute value. This is likely to be quicker than the other options, but less rigorous.
+## 1 || 
+STRONG::NNDSVDar:: Nonnegative Double Singular Value Decomposition where any elements that are zero are first filled with a random value between 0 and the CODE::average * 0.01:: (essentially small random values). This may be slightly faster but slightly less accurate than other options.
+## 2 || 
+STRONG::NNDSVDa:: Nonnegative Double Singular Value Decomposition where any elements that are zero are first filled with the average value.
+## 3 || 
+STRONG::NNDSVD:: Nonnegative Double Singular Value Decomposition where values are not changed according to any criteria. This promotes sparse results from the subsequent NMF (because, with multiplicative updates, zeros remain zeros). This may or may not be desirable (not least because sparsity implies the need for more components, but also the specific domain might imply that reasonable decomposition just isn't going to be sparse).
+::
+ARGUMENT:: windowSize
+
+    
+    The window size. We need to decide what precision we give it spectrally and temporally. For more information visit LINK::https://learn.flucoma.org/learn/fourier-transform/::
+
+
+
+ARGUMENT:: hopSize
+
+    
+    The window hop size. It can be any size, but low overlap will create audible artefacts. The -1 default value will default to half of windowSize (overlap of 2).
+
+
+
+ARGUMENT:: fftSize
+
+    
+    The inner FFT/IFFT size. It should be at least 4 samples long, at least the size of the window, and a power of 2. Making it larger allows an oversampling of the spectral precision. The -1 default value will use the next power of 2 equal or above the highest of windowSize and (bandwidth - 1) * 2.
+
+
+
+ 
+ARGUMENT:: trig
+  A CODE::kr:: signal that will trigger execution
+
+ARGUMENT:: blocking
+  Whether to execute this process directly on the server command FIFO or delegate to a worker thread. See CODE::processBlocking/process:: for caveats.
+
+
+INSTANCEMETHODS::
+
+METHOD:: cancel
+  Cancels non-blocking processing
+
+METHOD:: wait
+  When called in the context of a LINK::Classes/Routine:: (it won't work otherwise), will block execution until the processor has finished. This can be convinient for writing sequences of processes more linearly than using lots of nested actions.
+  
+EXAMPLES::
+
+code::
+
+(
+~src = Buffer.read(s,FluidFilesPath("Nicol-LoopE-M.wav"));
+~bases = Buffer.new(s);
+~activations = Buffer.new(s);
+~resynth = Buffer.new(s);
+)
+
+//how many bases do I need to decompose the buffer while accounting for 90% of the variance?
+(
+Routine{
+    FluidBufNMFSeed.process(s, ~src, ~bases, ~activations, coverage: 0.9, method: 1).wait;
+    "% bases".format(~bases.numChannels).postln;
+}.play;
+)
+
+//try the same process with less of the variance preserved
+(
+Routine{
+    FluidBufNMFSeed.process(s, ~src, ~bases, ~activations, coverage: 0.5).wait;
+    "% bases".format(~bases.numChannels).postln;
+}.play
+)
+
+// peek at the bases
+~bases.plot;
+
+// peek at the activations
+~activations.plot;
+
+//use the bases to run NMF on
+FluidBufNMF.process(s, ~src, resynth: ~resynth, resynthMode:1, bases: ~bases, basesMode:1, activations: ~activations, components: ~bases.numChannels, action: {"done".postln;})
+
+// peek at the components
+FluidWaveform(~resynth,bounds:Rect(0,0,1000,1000));
+
+// listen to component index 2:
+(
+{
+	PlayBuf.ar(~resynth.numChannels, ~resynth)[2]
+}.play
+)
+::

@@ -1,0 +1,198 @@
+TITLE:: FluidNoveltySlice
+SUMMARY:: Realtime Novelty-Based Slicer
+CATEGORIES:: Libraries>FluidCorpusManipulation
+RELATED:: Classes/FluidBufNoveltySlice,Classes/FluidOnsetSlice,Classes/FluidAmpSlice,Classes/FluidTransientSlice,Guides/FluidCorpusManipulation
+DESCRIPTION::
+
+    
+    A realtime slicer using an algorithm assessing novelty in the signal to estimate the slicing points.
+
+
+    
+    A novelty curve is derived from running a kernel across the diagonal of the similarity matrix, and looking for peaks of changes. It implements the algorithm published in 'Automatic Audio Segmentation Using a Measure of Audio Novelty' by J Foote.
+
+    The process will return an audio stream with single sample impulses at estimated starting points of the different slices.
+
+
+Read more about FluidNoveltySlice on the link::https://learn.flucoma.org/reference/noveltyslice##learn platform::.
+
+CLASSMETHODS::
+
+METHOD:: ar
+
+ARGUMENT:: in 
+
+  Audio-rate signal to slice
+
+
+
+
+
+
+
+
+ARGUMENT:: algorithm
+
+    
+    The feature on which novelty is computed.
+
+
+table::## 0 || 
+Spectrum - The magnitude of the full spectrum.
+## 1 || 
+MFCC - 13 Mel-Frequency Cepstrum Coefficients.
+## 2 || 
+Chroma - The contour of a 12-band chromagram.
+## 3 || 
+Pitch - The pitch and its confidence.
+## 4 || 
+Loudness - The true peak and loudness.
+::
+ARGUMENT:: kernelSize
+
+    
+    The granularity of the window in which the algorithm looks for change, in hops. A small number will be sensitive to short term changes, and a large number should look for long term changes.
+
+    STRONG::Constraints::
+
+    LIST::
+    ## 
+    Minimum: CODE::3::
+
+    ## 
+    Maximum: CODE::maxkernelSize::
+
+    ## 
+    Snaps to odd numbers
+
+    ::
+
+
+ARGUMENT:: threshold
+
+    
+    The normalised threshold, between 0 and 1, on the novelty curve to consider it a segmentation point.
+
+    STRONG::Constraints::
+
+    LIST::
+    ## 
+    Minimum: CODE::0::
+
+    ::
+
+
+ARGUMENT:: filterSize
+
+    
+    The size (in hops) of a smoothing filter that is applied on the novelty curve. A larger filter size allows for cleaner cuts on very sharp changes.
+
+    STRONG::Constraints::
+
+    LIST::
+    ## 
+    Minimum: CODE::1::
+
+    ## 
+    Maximum: CODE::maxfilterSize::
+
+    ::
+
+
+ARGUMENT:: minSliceLength
+
+    
+    The minimum duration of a slice in number of hops.
+
+    STRONG::Constraints::
+
+    LIST::
+    ## 
+    Minimum: CODE::0::
+
+    ::
+
+
+ARGUMENT:: windowSize
+
+    
+    The window size. As sinusoidal estimation relies on spectral frames, we need to decide what precision we give it spectrally and temporally. For more information visit LINK::https://learn.flucoma.org/learn/fourier-transform/::
+
+
+
+ARGUMENT:: hopSize
+
+    
+    The window hop size. As sinusoidal estimation relies on spectral frames, we need to move the window forward. It can be any size, but low overlap will create audible artefacts. The -1 default value will default to half of windowSize (overlap of 2).
+
+
+
+ARGUMENT:: fftSize
+
+    
+    The inner FFT/IFFT size. It should be at least 4 samples long, at least the size of the window, and a power of 2. Making it larger allows an oversampling of the spectral precision. The -1 default value will default to windowSize.
+
+
+
+ARGUMENT:: maxFFTSize
+
+    
+    Set an explicit upper bound on the FFT size at object instantiation. The default of CODE::nil:: or -1 sets this to whatever the initial FFT size is
+
+
+
+ARGUMENT:: maxKernelSize
+
+    
+    Manually sets a maximum value for CODE::kernelSize::. Can only be set at object instantiation. Default value of -1 sets this to the initial value of CODE::kernelSize::
+
+
+
+ARGUMENT:: maxFilterSize
+
+    
+    Manually sets a maximum value for CODE::filterSize::. Can only be set at object instantiation. Default value of -1 sets this to the initial value of CODE::filterSize::
+
+
+
+ 
+ 
+
+INSTANCEMETHODS::
+  
+EXAMPLES::
+code::
+
+~src = Buffer.read(s,FluidFilesPath("Tremblay-FMTriDist-M.wav"));
+
+(
+{
+	var sig = PlayBuf.ar(1,~src,BufRateScale.ir(~src),loop:1);
+	var slicer = FluidNoveltySlice.ar(sig,threshold:0.61);
+	sig = DelayN.ar(sig,0.1,1024*SampleDur.ir); // compensate for latency
+	[sig,slicer];
+}.play;
+)
+
+::
+strong::Tweaking Parameters::
+code::
+
+~src = Buffer.read(s,FluidFilesPath("Constanzo-PreparedSnare-M.wav"));
+
+(
+~synth = {
+	arg kernelSize = 3, threshold = 0.8, minSliceLength = 2, windowSize = 1024;
+	var sig = PlayBuf.ar(1,~src,BufRateScale.ir(~src),loop:1);
+	var slicer = FluidNoveltySlice.ar(sig,0,kernelSize,threshold,1,minSliceLength,windowSize,maxKernelSize:41);
+	sig = DelayN.ar(sig,0.1,windowSize*SampleDur.ir); // compensate for latency
+	[sig,slicer];
+}.play;
+)
+
+// try some different params
+~synth.set(\kernelSize,5,\threshold,0.61,\minSliceLength,3);
+~synth.set(\kernelSize,41,\threshold,0.35,\minSliceLength,1);
+~synth.set(\kernelSize,3,\threshold,0.5,\minSliceLength,1);
+
+::

@@ -1,0 +1,180 @@
+TITLE:: FluidNoveltyFeature
+SUMMARY:: Realtime Novelty Feature
+CATEGORIES:: Libraries>FluidCorpusManipulation
+RELATED:: Classes/FluidBufNoveltyFeature,Classes/FluidNoveltySlice,Classes/FluidAmpFeature,Classes/FluidOnsetFeature,Guides/FluidCorpusManipulation
+DESCRIPTION::
+
+    
+    Calculates the novelty feature of audio in realtime.
+
+
+    
+    Calculate novelty in realtime, the feature used by LINK::Classes/FluidNoveltySlice:: to perform segmentation.
+
+    Novelty derived by running a kernel across the diagonal of the similarity matrix. It implements the seminal results published in  'Automatic Audio Segmentation Using a Measure of Audio Novelty' by J Foote.
+
+    The argument for CODE::algorithm:: can be passed as an integer (see table below) which is modulatable, or as one of the following symbols: CODE::\spectrum::, CODE::\mfcc::, CODE::\chroma::, CODE::\pitch::, or CODE::\loudness::.
+
+
+Read more about FluidNoveltyFeature on the link::https://learn.flucoma.org/reference/noveltyfeature##learn platform::.
+
+CLASSMETHODS::
+
+METHOD:: kr
+
+ARGUMENT:: in
+
+  Audio-rate signal to analyze
+
+
+
+
+
+
+
+
+ARGUMENT:: algorithm
+
+    
+    The feature on which novelty is computed.
+
+
+table::## 0 || 
+Spectrum – The magnitude of the full spectrum.
+## 1 || 
+MFCC – 13 Mel-Frequency Cepstrum Coefficients.
+## 2 || 
+Chroma - The contour of a 12-band chromagram.
+## 3 || 
+Pitch – The pitch and its confidence.
+## 4 || 
+Loudness – The true peak and loudness.
+::
+ARGUMENT:: kernelSize
+
+    
+    The granularity of the window in which the algorithm looks for change in hops. A small number will be sensitive to short term changes, and a large number should look for long term changes.
+
+    STRONG::Constraints::
+
+    LIST::
+    ## 
+    Minimum: CODE::3::
+
+    ## 
+    Maximum: CODE::maxkernelSize::
+
+    ## 
+    Snaps to odd numbers
+
+    ::
+
+
+ARGUMENT:: filterSize
+
+    
+    The size of a smoothing filter that is applied on the novelty curve. A larger filter size allows for cleaner cuts on very sharp changes.
+
+    STRONG::Constraints::
+
+    LIST::
+    ## 
+    Minimum: CODE::1::
+
+    ## 
+    Maximum: CODE::maxfilterSize::
+
+    ::
+
+
+ARGUMENT:: windowSize
+
+    
+    The window size. As novelty estimation relies on spectral frames, we need to decide what precision we give it spectrally and temporally.
+
+
+
+ARGUMENT:: hopSize
+
+    
+    The window hop size. As novelty estimation relies on spectral frames, we need to move the window forward. It can be any size, but low overlap will create audible artefacts.
+
+
+
+ARGUMENT:: fftSize
+
+    
+    The inner FFT/IFFT size. It should be at least 4 samples long, at least the size of the window, and a power of 2. Making it larger allows an oversampling of the spectral precision.
+
+
+
+ARGUMENT:: maxFFTSize
+
+    
+    Set an explicit upper bound on the FFT size at object instantiation. The default of CODE::nil:: or -1 sets this to whatever the initial FFT size is
+
+
+
+ARGUMENT:: maxKernelSize
+
+    
+    Manually sets a maximum value for CODE::kernelSize::. Can only be set at object instantiation. Default value of -1 sets this to the initial value of CODE::kernelSize::
+
+
+
+ARGUMENT:: maxFilterSize
+
+    
+    Manually sets a maximum value for CODE::filterSize::. Can only be set at object instantiation. Default value of -1 sets this to the initial value of CODE::filterSize::
+
+
+
+ 
+ 
+
+RETURNS::     
+    A KR signal of the feature.
+
+
+
+INSTANCEMETHODS::
+  
+EXAMPLES::
+code::
+~src = Buffer.read(s,FluidFilesPath("Tremblay-AaS-AcBassGuit-Melo-M.wav"));
+
+(
+{
+	var sig = PlayBuf.ar(~src.numChannels,~src,BufRateScale.ir(~src),loop:1);
+	var feature = FluidNoveltyFeature.kr(sig,kernelSize:31,windowSize:4096,hopSize:512); // feature is pitch and pitch confidence
+	SendReply.kr(Impulse.kr(30),"/feature",feature);
+	sig.dup;
+}.play;
+
+OSCdef(\feature,{
+	arg msg;
+	{"*".post} ! (msg[3] * 20);
+	" %".format(msg[3].round(0.001)).postln;
+},"/feature");
+)
+
+::
+strong::Make your own threshold and Schmidt Trigger::
+code::
+~src = Buffer.read(s,FluidFilesPath("Tremblay-AaS-SynthTwoVoices-M.wav"));
+
+(
+{
+	var sig = PlayBuf.ar(~src.numChannels,~src,BufRateScale.ir(~src),loop:1);
+	var feature = FluidNoveltyFeature.kr(sig,1);
+	var trig = Schmidt.kr(feature,0.3,0.5);
+	SendReply.kr(trig,"/onset");
+	sig.dup;
+}.play;
+
+OSCdef(\onset,{
+	arg msg;
+	"onset".postln;
+},"/onset");
+)
+::

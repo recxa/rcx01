@@ -1,0 +1,383 @@
+TITLE:: FluidBufAudioTransport
+SUMMARY:: Interpolate between buffers
+CATEGORIES:: Libraries>FluidCorpusManipulation
+RELATED:: Classes/FluidNMFMorph,Classes/FluidBufNMFCross,Classes/FluidAudioTransport
+DESCRIPTION::
+
+    
+    Interpolates between the spectra of two sounds using optimal transport
+
+
+    
+    Interpolates between the spectra of two sounds using the optimal transport algorithm. This enables morphing and hybridisation of the perceptual qualities of each source linearly.
+
+    See Henderson and Solomon (2019) AUDIO TRANSPORT: A GENERALIZED PORTAMENTO VIA OPTIMAL TRANSPORT, DaFx
+
+    LINK::https://arxiv.org/abs/1906.06763::
+
+
+Read more about FluidBufAudioTransport on the link::https://learn.flucoma.org/reference/audiotransport##learn platform::.
+
+CLASSMETHODS::
+
+METHOD:: process, processBlocking
+  Processs the source LINK::Classes/Buffer:: on the LINK::Classes/Server::. CODE::processBlocking:: will execute directly in the server command FIFO, whereas CODE::process:: will delegate to a separate worker thread. The latter is generally only worthwhile for longer-running jobs where you don't wish to tie up the server.
+
+ARGUMENT:: server
+	The LINK::Classes/Server:: on which the buffers to be processed are allocated.
+
+
+
+
+
+
+
+
+ARGUMENT:: sourceA
+
+    
+    The first source buffer
+
+
+
+ARGUMENT:: startFrameA
+
+    
+    offset into the first source buffer (samples)
+
+    STRONG::Constraints::
+
+    LIST::
+    ## 
+    Minimum: CODE::0::
+
+    ::
+
+
+ARGUMENT:: numFramesA
+
+    
+    number of samples to use from first source buffer
+
+
+
+ARGUMENT:: startChanA
+
+    
+    starting channel of first source buffer
+
+    STRONG::Constraints::
+
+    LIST::
+    ## 
+    Minimum: CODE::0::
+
+    ::
+
+
+ARGUMENT:: numChansA
+
+    
+    number of channels to process in first source buffer
+
+
+
+ARGUMENT:: sourceB
+
+    
+    the second source buffer
+
+
+
+ARGUMENT:: startFrameB
+
+    
+    offset into the second source buffer (samples)
+
+    STRONG::Constraints::
+
+    LIST::
+    ## 
+    Minimum: CODE::0::
+
+    ::
+
+
+ARGUMENT:: numFramesB
+
+    
+    number of samples to process from second buffer
+
+
+
+ARGUMENT:: startChanB
+
+    
+    starting channel for second buffer
+
+    STRONG::Constraints::
+
+    LIST::
+    ## 
+    Minimum: CODE::0::
+
+    ::
+
+
+ARGUMENT:: numChansB
+
+    
+    number of channels to process in second buffer
+
+
+
+ARGUMENT:: destination
+
+    
+    buffer for interpolated audio
+
+
+
+ARGUMENT:: interpolation
+
+    
+    The amount to interpolate between A and B (0-1, 0 = A, 1 = B)
+
+    STRONG::Constraints::
+
+    LIST::
+    ## 
+    Minimum: CODE::0.0::
+
+    ## 
+    Maximum: CODE::1.0::
+
+    ::
+
+
+ARGUMENT:: windowSize
+
+    
+    The window size. As spectral differencing relies on spectral frames, we need to decide what precision we give it spectrally and temporally. For more information visit LINK::https://learn.flucoma.org/learn/fourier-transform/::
+
+
+
+ARGUMENT:: hopSize
+
+    
+    The window hop size. As sinusoidal estimation relies on spectral frames, we need to move the window forward. It can be any size, but low overlap will create audible artefacts. The -1 default value will default to half of windowSize (overlap of 2).
+
+
+
+ARGUMENT:: fftSize
+
+    
+    The inner FFT/IFFT size. It should be at least 4 samples long, at least the size of the window, and a power of 2. Making it larger allows an oversampling of the spectral precision. The -1 default value will use the next power of 2 equal or above the highest of windowSize and (bandwidth - 1) * 2.
+
+
+
+ 
+ARGUMENT:: freeWhenDone
+  Free the server instance when processing complete. Default CODE::true::
+
+ARGUMENT:: action
+	A function to be evaluated once the offline process has finished and all Buffer's instance variables have been updated on the client side. The function will be passed CODE::[features]:: as an argument.
+
+RETURNS:: An instance of the processor
+
+METHOD:: kr
+  Trigger the equivalent behaviour to CODE::processBlocking / process:: from a LINK::Classes/Synth::. Can be useful for expressing a sequence of buffer and data processing jobs to execute. Note that the work still executes on the server command FIFO (not the audio thread), and it is the caller's responsibility to manage the sequencing, using the CODE::done:: status of the various UGens.
+
+
+
+
+
+
+
+ARGUMENT:: sourceA
+
+    
+    The first source buffer
+
+
+
+ARGUMENT:: startFrameA
+
+    
+    offset into the first source buffer (samples)
+
+    STRONG::Constraints::
+
+    LIST::
+    ## 
+    Minimum: CODE::0::
+
+    ::
+
+
+ARGUMENT:: numFramesA
+
+    
+    number of samples to use from first source buffer
+
+
+
+ARGUMENT:: startChanA
+
+    
+    starting channel of first source buffer
+
+    STRONG::Constraints::
+
+    LIST::
+    ## 
+    Minimum: CODE::0::
+
+    ::
+
+
+ARGUMENT:: numChansA
+
+    
+    number of channels to process in first source buffer
+
+
+
+ARGUMENT:: sourceB
+
+    
+    the second source buffer
+
+
+
+ARGUMENT:: startFrameB
+
+    
+    offset into the second source buffer (samples)
+
+    STRONG::Constraints::
+
+    LIST::
+    ## 
+    Minimum: CODE::0::
+
+    ::
+
+
+ARGUMENT:: numFramesB
+
+    
+    number of samples to process from second buffer
+
+
+
+ARGUMENT:: startChanB
+
+    
+    starting channel for second buffer
+
+    STRONG::Constraints::
+
+    LIST::
+    ## 
+    Minimum: CODE::0::
+
+    ::
+
+
+ARGUMENT:: numChansB
+
+    
+    number of channels to process in second buffer
+
+
+
+ARGUMENT:: destination
+
+    
+    buffer for interpolated audio
+
+
+
+ARGUMENT:: interpolation
+
+    
+    The amount to interpolate between A and B (0-1, 0 = A, 1 = B)
+
+    STRONG::Constraints::
+
+    LIST::
+    ## 
+    Minimum: CODE::0.0::
+
+    ## 
+    Maximum: CODE::1.0::
+
+    ::
+
+
+ARGUMENT:: windowSize
+
+    
+    The window size. As spectral differencing relies on spectral frames, we need to decide what precision we give it spectrally and temporally. For more information visit LINK::https://learn.flucoma.org/learn/fourier-transform/::
+
+
+
+ARGUMENT:: hopSize
+
+    
+    The window hop size. As sinusoidal estimation relies on spectral frames, we need to move the window forward. It can be any size, but low overlap will create audible artefacts. The -1 default value will default to half of windowSize (overlap of 2).
+
+
+
+ARGUMENT:: fftSize
+
+    
+    The inner FFT/IFFT size. It should be at least 4 samples long, at least the size of the window, and a power of 2. Making it larger allows an oversampling of the spectral precision. The -1 default value will use the next power of 2 equal or above the highest of windowSize and (bandwidth - 1) * 2.
+
+
+
+ 
+ARGUMENT:: trig
+  A CODE::kr:: signal that will trigger execution
+
+ARGUMENT:: blocking
+  Whether to execute this process directly on the server command FIFO or delegate to a worker thread. See CODE::processBlocking/process:: for caveats.
+
+
+INSTANCEMETHODS::
+
+METHOD:: cancel
+  Cancels non-blocking processing
+
+METHOD:: wait
+  When called in the context of a LINK::Classes/Routine:: (it won't work otherwise), will block execution until the processor has finished. This can be convinient for writing sequences of processes more linearly than using lots of nested actions.
+  
+EXAMPLES::
+
+code::
+(
+~srcA = Buffer.readChannel(s,FluidFilesPath("Tremblay-CEL-GlitchyMusicBoxMelo.wav"),channels:[0]);
+~srcB = Buffer.readChannel(s,FluidFilesPath("Nicol-LoopE-M.wav"),channels:[0]);
+)
+
+// fft settings have a large impact on the results. play around with them to hear how.
+// and/or see the (real time) FluidAudioTransport example code
+(
+~result = Buffer(s);
+FluidBufAudioTransport.processBlocking(s,
+	sourceA:~srcA,
+	sourceB:~srcB,
+	destination:~result,
+	interpolation:0.5,
+	windowSize:1024, // this is the default
+	hopSize:512, // this is the default
+	fftSize:1024, // this is the default
+	action:{"done".postln;}
+);
+)
+
+// the output will be the same length as the shorter source buffer
+~result.play;
+
+::

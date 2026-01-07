@@ -1,0 +1,396 @@
+TITLE:: FluidRobustScale
+SUMMARY:: Apply Robust Scaling to a FluidDataSet
+CATEGORIES:: Libraries>FluidCorpusManipulation
+RELATED:: Classes/FluidNormalize,Classes/FluidStandardize,Classes/FluidStandardize,Classes/FluidNormalize,Classes/FluidDataSet
+DESCRIPTION::
+
+    
+    Apply Robust Scaling to a LINK::Classes/FluidDataSet:: based on statistics of the data such that each dimension has a median centred on 0 and a range of 1 from the CODE::low:: percentile to the CODE::high:: percentile.
+
+
+    
+    For example, using the default values for CODE::low:: (25) and CODE::high::, RobustScale will find the range between the 25th and 75th percentile for each dimension and then scale each dimension accordingly so the range between the 25th and 75th percentile the scaled data is 1. RobustScale also offsets each dimension so the median is centred on 0.
+
+    Because RobustScale is based on percentiles, it is less affected by extreme outliers than other scalers (such as Standardize and Normalize). This may help RobustScale position the majority of the data in a -1 to 1 -ish range better than other scalers.
+
+
+Read more about FluidRobustScale on the link::https://learn.flucoma.org/reference/robustscale##learn platform::.
+
+CLASSMETHODS::
+
+METHOD:: new
+
+ARGUMENT:: server 
+
+  The LINK::Classes/Server:: on which to construct this object
+ARGUMENT:: low
+
+    
+    The low percentile boundary. The default is 25.
+
+    STRONG::Constraints::
+
+    LIST::
+    ## 
+    Minimum: CODE::0::
+
+    ## 
+    Maximum: CODE::100::
+
+    ::
+
+
+ARGUMENT:: high
+
+    
+    The high percentile boundary. The default is 75.
+
+    STRONG::Constraints::
+
+    LIST::
+    ## 
+    Minimum: CODE::0::
+
+    ## 
+    Maximum: CODE::100::
+
+    ::
+
+
+ 
+ 
+
+INSTANCEMETHODS::
+ 
+METHOD:: low
+
+  Property for code::low::. See CODE::new::
+
+METHOD:: high
+
+  Property for code::high::. See CODE::new::
+
+ METHOD:: fit
+
+      
+    Compute the scaling factors from a LINK::Classes/FluidDataSet:: for later.
+
+
+ARGUMENT:: dataSet
+
+    
+    The LINK::Classes/FluidDataSet:: to determine the statistics of.
+
+
+ 
+ARGUMENT:: action 
+
+  A function to execute when the server has completed running fit
+
+METHOD:: fitTransform
+
+      
+    Scale a LINK::Classes/FluidDataSet::
+
+
+ARGUMENT:: sourceDataSet
+
+    
+    The LINK::Classes/FluidDataSet:: to determine the statistics of and scale.
+
+
+ARGUMENT:: destDataSet
+
+    
+    The LINK::Classes/FluidDataSet:: to write the scaled data to.
+
+
+ 
+ARGUMENT:: action 
+
+  A function to execute when the server has completed running fitTransform
+
+METHOD:: transform
+
+      
+    Scale a LINK::Classes/FluidDataSet:: into another LINK::Classes/FluidDataSet::, using the learned statistics from the previous call to CODE::fit::
+
+
+ARGUMENT:: sourceDataSet
+
+    
+    The LINK::Classes/FluidDataSet:: to scale
+
+
+ARGUMENT:: destDataSet
+
+    
+    The LINK::Classes/FluidDataSet:: to write the scaled data to.
+
+
+ 
+ARGUMENT:: action 
+
+  A function to execute when the server has completed running transform
+
+METHOD:: transformPoint
+
+      
+    Scale a data point, using the learned statistics from the previous call to CODE::fit::
+
+
+ARGUMENT:: sourceBuffer
+
+    
+    A LINK::Classes/Buffer:: with a data point
+
+
+ARGUMENT:: destBuffer
+
+    
+    A LINK::Classes/Buffer:: to write the scaled values to
+
+
+ 
+ARGUMENT:: action 
+
+  A function to execute when the server has completed running transformPoint
+
+METHOD:: inverseTransform
+
+      
+    Inverse scale a LINK::Classes/FluidDataSet:: into another LINK::Classes/FluidDataSet::: going from the range of the scaled data back to the range of the data that was used in the previous call to CODE::fit::
+
+
+ARGUMENT:: sourceDataSet
+
+    
+    The LINK::Classes/FluidDataSet:: to inverse scale
+
+
+ARGUMENT:: destDataSet
+
+    
+    The LINK::Classes/FluidDataSet:: to write the scaled data to.
+
+
+ 
+ARGUMENT:: action 
+
+  A function to execute when the server has completed running inverseTransform
+
+METHOD:: inverseTransformPoint
+
+      
+    Inverse scale a data point, going from the range of the scaled data back to the range of the DataSet that was used for CODE::fit::.
+
+
+ARGUMENT:: sourceBuffer
+
+    
+    A LINK::Classes/Buffer:: with a data in the scaled range
+
+
+ARGUMENT:: destBuffer
+
+    
+    A LINK::Classes/Buffer:: to write the un-scaled values in the original range to
+
+
+ 
+ARGUMENT:: action 
+
+  A function to execute when the server has completed running inverseTransformPoint
+
+METHOD:: cols
+
+      
+    The number of columns (dimensions) in this model or dataset / labeset
+
+
+ 
+ARGUMENT:: action 
+
+  A function to execute when the server has completed running cols
+
+METHOD:: clear
+
+      
+    Resets the internal state of the model
+
+
+ 
+ARGUMENT:: action 
+
+  A function to execute when the server has completed running clear
+
+METHOD:: size
+
+      
+    The number of data points (entries / observations) in this model or dataset / labeset
+
+
+ 
+ARGUMENT:: action 
+
+  A function to execute when the server has completed running size
+
+METHOD:: load
+
+      
+    Replace the internal state of the object from a LINK::Classes/Dictionary::.
+
+
+ARGUMENT:: dict
+
+    
+
+ 
+ARGUMENT:: action 
+
+  A function to execute when the server has completed running load
+
+METHOD:: dump
+
+      
+    Dump the state of this object as a LINK::Classes/Dictionary::, which will be passed to the action function provided. This object must first be CODE::fit``ted before ``dump:: can be called.
+
+
+ 
+ARGUMENT:: action 
+
+  A function to execute when the server has completed running dump
+
+METHOD:: read
+
+      
+    Replace the internal state of the object from a JSON file on disk.
+
+
+ARGUMENT:: filename
+
+    
+    Path of the file to load from
+
+
+ 
+ARGUMENT:: action 
+
+  A function to execute when the server has completed running read
+
+METHOD:: write
+
+      
+    Save the internal state of the object to a JSON file on disk. This object must first be CODE::fit:: before CODE::write:: can be called.
+
+
+ARGUMENT:: filename
+
+    
+    Path of the file to load from
+
+
+ 
+ARGUMENT:: action 
+
+  A function to execute when the server has completed running write
+
+ 
+EXAMPLES::
+code::
+
+s.boot;
+
+~src = Buffer.readChannel(s,FluidFilesPath("Olencki-TenTromboneLongTones-M.wav"),channels:[0]);
+
+// spectral analysis
+(
+~select = [\skewness,\flatness];
+~features = Buffer(s);
+FluidBufSpectralShape.processBlocking(s,~src,features:~features,select:~select);
+~ds = FluidDataSet(s).fromBuffer(~features);
+~ds.print;
+)
+
+// scale using Normalize, Standardize, and RobustScale
+(
+~ds_norm = FluidDataSet(s);
+~ds_stan = FluidDataSet(s);
+~ds_robu = FluidDataSet(s);
+FluidNormalize(s).fitTransform(~ds,~ds_norm);
+FluidStandardize(s).fitTransform(~ds,~ds_stan);
+~robu = FluidRobustScale(s).fitTransform(~ds,~ds_robu);
+~ds_norm.print;
+~ds_stan.print;
+~ds_robu.print;
+)
+
+// plot the three scalers
+(
+~ds_norm.dump({
+	arg dict_norm;
+	~ds_stan.dump({
+		arg dict_stan;
+		~ds_robu.dump({
+			arg dict_robu;
+
+			defer{
+				var win = Window("Comparing Scalers",Rect(0,0,1500,500));
+				var comp = CompositeView(win,win.bounds);
+				comp.layout_(
+					HLayout(
+						*[dict_norm,dict_stan,dict_robu].collect{
+							arg dict;
+							FluidPlotter(
+								win,
+								standalone:false,
+								dict:dict,
+								xmin:-3,
+								xmax:3,
+								ymin:-3,
+								ymax:3
+							);
+						};
+					)
+				);
+
+				UserView(win,win.bounds)
+				.drawFunc_{
+					Pen.stringInRect("All plots are the same data with different scalers.\nAll axes are from -3 to 3.",Rect(20,30,win.bounds.width * 0.3,40),color:Color.blue);
+					["Normalize","Standardize","RobustScale"].do{
+						arg name, i;
+						Pen.stringAtPoint(name,Point((i * win.bounds.width * 0.33) + 20,15),color:Color.red);
+					};
+					Pen.stringInRect("In this case, RobustScale keeps more of the data centred around 0 in both\ndimensions than Standardize (and of course better than Normalize).\nNotice however that there's a lot of data \"off-plot\" with RobustScale.",Rect(win.bounds.width * 0.67,win.bounds.height * 0.88,win.bounds.width * 0.3,win.bounds.height * 0.3),color:Color.blue);
+				};
+
+				win.front;
+			};
+		});
+	});
+});
+)
+
+::
+strong::Server-side Querying::
+code::
+
+(
+{
+	var src = PlayBuf.ar(1,~src,BufRateScale.ir(~src),loop:1);
+	var inputPoint = LocalBuf(2);
+	var outputPoint = LocalBuf(2);
+	var analysis = FluidSpectralShape.kr(src,~select);
+	var robu, sig;
+
+	analysis.poll(label:"Raw Analysis");
+	FluidKrToBuf.kr(analysis,inputPoint);
+	~robu.kr(Impulse.kr(100),inputPoint,outputPoint);
+	robu = FluidBufToKr.kr(outputPoint);
+	robu.poll(label:"RobustScale Analysis");
+
+	sig = AllpassC.ar(src,5,robu.abs.clip(0,5).lag(1));
+	sig;
+}.play;
+)
+::

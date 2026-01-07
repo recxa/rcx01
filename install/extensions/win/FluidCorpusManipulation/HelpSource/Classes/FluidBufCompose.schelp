@@ -1,0 +1,331 @@
+TITLE:: FluidBufCompose
+SUMMARY:: Buffer Compositing Utility
+CATEGORIES:: Libraries>FluidCorpusManipulation
+RELATED:: Classes/FluidBufSelect,Classes/FluidBufSelectEvery,Classes/FluidBufFlatten,Classes/FluidBufStats,Guides/FluidCorpusManipulation,Classes/Buffer
+DESCRIPTION::
+
+    
+    A utility for manipulating the contents of buffers.
+
+
+    
+    This object is a low-level tool for manipulating buffers and their contents. By specifying ranges of samples and channels to copy, as well as destination and source gains it can provide a powerful interface for performing actions such as a Left/Right to Mid/Side conversion and mixing down multichannel audio
+
+
+Read more about FluidBufCompose on the link::https://learn.flucoma.org/reference/bufcompose##learn platform::.
+
+CLASSMETHODS::
+
+METHOD:: process, processBlocking
+  Processs the source LINK::Classes/Buffer:: on the LINK::Classes/Server::. CODE::processBlocking:: will execute directly in the server command FIFO, whereas CODE::process:: will delegate to a separate worker thread. The latter is generally only worthwhile for longer-running jobs where you don't wish to tie up the server.
+
+ARGUMENT:: server
+	The LINK::Classes/Server:: on which the buffers to be processed are allocated.
+
+
+
+
+
+
+
+
+ARGUMENT:: source
+
+    
+    The name of the source buffer.
+
+
+
+ARGUMENT:: startFrame
+
+    
+    The starting point (in samples) from which to copy in the source buffer.
+
+    STRONG::Constraints::
+
+    LIST::
+    ## 
+    Minimum: CODE::0::
+
+    ::
+
+
+ARGUMENT:: numFrames
+
+    
+    The duration (in samples) to copy from the source buffer. The default (-1) copies the full length of the buffer.
+
+
+
+ARGUMENT:: startChan
+
+    
+    The first channel from which to copy in the source buffer.
+
+    STRONG::Constraints::
+
+    LIST::
+    ## 
+    Minimum: CODE::0::
+
+    ::
+
+
+ARGUMENT:: numChans
+
+    
+    The number of channels from which to copy in the source buffer. This parameter will wrap around the number of channels in the source buffer. The default (-1) copies all of the buffer's channels.
+
+
+
+ARGUMENT:: gain
+
+    
+    The gain applied to the samples to be copied from the source buffer.
+
+
+
+ARGUMENT:: destination
+
+    
+    The name of the destination buffer.
+
+
+
+ARGUMENT:: destStartFrame
+
+    
+    The time offset (in samples) in the destination buffer to start writing the source at. The destination buffer will be resized if the portion to copy is overflowing.
+
+
+
+ARGUMENT:: destStartChan
+
+    
+    The channel offset in the destination buffer to start writing the source at. The destination buffer will be resized if the number of channels to copy is overflowing.
+
+
+
+ARGUMENT:: destGain
+
+    
+    The gain applied to the samples in the region of the destination buffer over which the source is to be copied. The default value (0) will overwrite that section of the destination buffer, and a value of 1.0 would sum the source to the material that was present.
+
+
+
+ 
+ARGUMENT:: freeWhenDone
+  Free the server instance when processing complete. Default CODE::true::
+
+ARGUMENT:: action
+	A function to be evaluated once the offline process has finished and all Buffer's instance variables have been updated on the client side. The function will be passed CODE::[features]:: as an argument.
+
+RETURNS:: An instance of the processor
+
+METHOD:: kr
+  Trigger the equivalent behaviour to CODE::processBlocking / process:: from a LINK::Classes/Synth::. Can be useful for expressing a sequence of buffer and data processing jobs to execute. Note that the work still executes on the server command FIFO (not the audio thread), and it is the caller's responsibility to manage the sequencing, using the CODE::done:: status of the various UGens.
+
+
+
+
+
+
+
+ARGUMENT:: source
+
+    
+    The name of the source buffer.
+
+
+
+ARGUMENT:: startFrame
+
+    
+    The starting point (in samples) from which to copy in the source buffer.
+
+    STRONG::Constraints::
+
+    LIST::
+    ## 
+    Minimum: CODE::0::
+
+    ::
+
+
+ARGUMENT:: numFrames
+
+    
+    The duration (in samples) to copy from the source buffer. The default (-1) copies the full length of the buffer.
+
+
+
+ARGUMENT:: startChan
+
+    
+    The first channel from which to copy in the source buffer.
+
+    STRONG::Constraints::
+
+    LIST::
+    ## 
+    Minimum: CODE::0::
+
+    ::
+
+
+ARGUMENT:: numChans
+
+    
+    The number of channels from which to copy in the source buffer. This parameter will wrap around the number of channels in the source buffer. The default (-1) copies all of the buffer's channels.
+
+
+
+ARGUMENT:: gain
+
+    
+    The gain applied to the samples to be copied from the source buffer.
+
+
+
+ARGUMENT:: destination
+
+    
+    The name of the destination buffer.
+
+
+
+ARGUMENT:: destStartFrame
+
+    
+    The time offset (in samples) in the destination buffer to start writing the source at. The destination buffer will be resized if the portion to copy is overflowing.
+
+
+
+ARGUMENT:: destStartChan
+
+    
+    The channel offset in the destination buffer to start writing the source at. The destination buffer will be resized if the number of channels to copy is overflowing.
+
+
+
+ARGUMENT:: destGain
+
+    
+    The gain applied to the samples in the region of the destination buffer over which the source is to be copied. The default value (0) will overwrite that section of the destination buffer, and a value of 1.0 would sum the source to the material that was present.
+
+
+
+ 
+ARGUMENT:: trig
+  A CODE::kr:: signal that will trigger execution
+
+ARGUMENT:: blocking
+  Whether to execute this process directly on the server command FIFO or delegate to a worker thread. See CODE::processBlocking/process:: for caveats.
+
+
+INSTANCEMETHODS::
+
+METHOD:: cancel
+  Cancels non-blocking processing
+
+METHOD:: wait
+  When called in the context of a LINK::Classes/Routine:: (it won't work otherwise), will block execution until the processor has finished. This can be convinient for writing sequences of processes more linearly than using lots of nested actions.
+  
+EXAMPLES::
+strong::Basic Copy::
+code::
+~src = Buffer.read(s,FluidFilesPath("Tremblay-FMTriDist-M.wav"));
+
+(
+~destination = Buffer(s);
+FluidBufCompose.processBlocking(s,~src,destination:~destination,action:{
+	defer{
+		~src.plot;
+		~destination.plot;
+	};
+});
+)
+::
+strong::Mixing::
+code::
+(
+~srcA = Buffer.read(s,FluidFilesPath("Tremblay-AaS-AcBassGuit-Melo-M.wav"));
+~srcB = Buffer.read(s,FluidFilesPath("Tremblay-AaS-VoiceQC-B2K-M.wav"));
+)
+
+// listen separately if you want
+~srcA.play;
+~srcB.play;
+
+(
+fork{
+	~destination = Buffer(s);
+	[~srcA,~srcB].do{
+		arg src;
+		FluidBufCompose.processBlocking(s,src,destination:~destination,destGain:1,gain:-6.dbamp);
+	};
+	s.sync;
+	~destination.play;
+}
+)
+::
+strong::Subsections::
+code::
+(
+~srcA = Buffer.read(s,FluidFilesPath("Tremblay-SlideChoirAdd-M.wav"));
+~srcB = Buffer.read(s,FluidFilesPath("Tremblay-AaS-SynthTwoVoices-M.wav"));
+)
+
+// listen separately if you want
+~srcA.play;
+~srcB.play;
+
+(
+fork{
+	~destination = Buffer(s);
+
+	// starting at frame 30000, copy 1 second of ~srcB
+	FluidBufCompose.processBlocking(s,~srcB,startFrame:30000,numFrames:44100,destination:~destination,destGain:1,gain:-6.dbamp);
+	// copy 9000 frames of ~srcA
+	FluidBufCompose.processBlocking(s,~srcA,numFrames:9000,destination:~destination,destGain:1,gain:-6.dbamp);
+
+	s.sync;
+	~destination.play;
+}
+)
+::
+strong::Multichannel::
+code::
+
+(
+~stereoPiano = Buffer.read(s,FluidFilesPath("Tremblay-SA-UprightPianoPedalWide.wav"));
+~synthSounds = Buffer.read(s,FluidFilesPath("Tremblay-AaS-SynthTwoVoices-M.wav"));
+)
+
+// copy the mono synth sounds into the R channel of the stereo piano buffer using destStartChan:1
+(
+FluidBufCompose.processBlocking(s,~synthSounds,destination:~stereoPiano,destGain:1,destStartChan:1,action:{
+	~stereoPiano.play;
+});
+)
+
+// copy just the L channel of the piano into the R channel of the synth sounds
+// (because it doesn't have an R channel yet, BufCompose will create one)
+(
+FluidBufCompose.processBlocking(s,~stereoPiano,destination:~synthSounds,numChans:1,destGain:1,destStartChan:1,action:{
+	~synthSounds.play;
+});
+)
+
+// if numChans is greater than the available channels it will wrap around to the beginning channels, so we can reverse the channels like this:
+
+// original
+~stereoPiano.play;
+
+(
+~reversed = Buffer(s);
+FluidBufCompose.processBlocking(s,~stereoPiano,startChan:1,numChans:2,destination:~reversed,action:{
+	~reversed.play;
+});
+)
+::

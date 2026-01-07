@@ -1,0 +1,341 @@
+TITLE:: FluidStandardize
+SUMMARY:: Standardize a FluidDataSet
+CATEGORIES:: Libraries>FluidCorpusManipulation
+RELATED:: Classes/FluidNormalize,Classes/FluidRobustScale,Classes/FluidDataSet
+DESCRIPTION::
+
+    
+    Standardize a LINK::Classes/FluidDataSet::. Rescale using its mean(s) and standard deviation(s) in each dimension, such that each dimension has a mean of 0 and a standard deviation of 1.
+
+
+    
+
+Read more about FluidStandardize on the link::https://learn.flucoma.org/reference/standardize##learn platform::.
+
+CLASSMETHODS::
+
+METHOD:: new
+
+ARGUMENT:: server 
+
+  The LINK::Classes/Server:: on which to construct this object
+ 
+ 
+
+INSTANCEMETHODS::
+ 
+ METHOD:: fit
+
+      
+    Fit model to a DataSet without applying scaling
+
+
+ARGUMENT:: dataSet
+
+    
+    The LINK::Classes/FluidDataSet:: to learn the statistics of (mean and standard deviation)
+
+
+ 
+ARGUMENT:: action 
+
+  A function to execute when the server has completed running fit
+
+METHOD:: fitTransform
+
+      
+    CODE::fit:: the model to the CODE::sourceDataSet:: and then standardize the CODE::sourceDataSet:: and write into CODE::destDataSet::
+
+
+ARGUMENT:: sourceDataSet
+
+    
+    The LINK::Classes/FluidDataSet:: to first CODE::fit:: to and then standardize
+
+
+ARGUMENT:: destDataSet
+
+    
+    The LINK::Classes/FluidDataSet:: to populate with standardized data
+
+
+ 
+ARGUMENT:: action 
+
+  A function to execute when the server has completed running fitTransform
+
+METHOD:: transform
+
+      
+    Standardize a LINK::Classes/FluidDataSet::, using the learned statistics from a previous call to CODE::fit::
+
+
+ARGUMENT:: sourceDataSet
+
+    
+    The LINK::Classes/FluidDataSet:: to standardize
+
+
+ARGUMENT:: destDataSet
+
+    
+    The LINK::Classes/FluidDataSet:: to write the standardized data into
+
+
+ 
+ARGUMENT:: action 
+
+  A function to execute when the server has completed running transform
+
+METHOD:: transformPoint
+
+      
+    Standardize a data point, using the learned statistics from a previous call to CODE::fit::
+
+
+ARGUMENT:: sourceBuffer
+
+    
+    A LINK::Classes/Buffer:: with source data to standardize
+
+
+ARGUMENT:: destBuffer
+
+    
+    A LINK::Classes/Buffer:: to write the standardized data into
+
+
+ 
+ARGUMENT:: action 
+
+  A function to execute when the server has completed running transformPoint
+
+METHOD:: inverseTransform
+
+      
+    Un-standardize a LINK::Classes/FluidDataSet::, using the learned statistics from a previous call to CODE::fit::.
+
+
+ARGUMENT:: sourceDataSet
+
+    
+    The LINK::Classes/FluidDataSet:: to of data to transform from the standardized scale to the original scale.
+
+
+ARGUMENT:: destDataSet
+
+    
+    The LINK::Classes/FluidDataSet:: to write the transformed data to.
+
+
+ 
+ARGUMENT:: action 
+
+  A function to execute when the server has completed running inverseTransform
+
+METHOD:: inverseTransformPoint
+
+      
+    Un-standardize a data point, using the learned statistics from a previous call to CODE::fit::
+
+
+ARGUMENT:: sourceBuffer
+
+    
+    A LINK::Classes/Buffer:: with the data in the stadardized range
+
+
+ARGUMENT:: destBuffer
+
+    
+    A LINK::Classes/Buffer:: to write the output of the transformation to
+
+
+ 
+ARGUMENT:: action 
+
+  A function to execute when the server has completed running inverseTransformPoint
+
+METHOD:: cols
+
+      
+    The number of columns (dimensions) in this model or dataset / labeset
+
+
+ 
+ARGUMENT:: action 
+
+  A function to execute when the server has completed running cols
+
+METHOD:: clear
+
+      
+    Resets the internal state of the model
+
+
+ 
+ARGUMENT:: action 
+
+  A function to execute when the server has completed running clear
+
+METHOD:: size
+
+      
+    The number of data points (entries / observations) in this model or dataset / labeset
+
+
+ 
+ARGUMENT:: action 
+
+  A function to execute when the server has completed running size
+
+METHOD:: load
+
+      
+    Replace the internal state of the object from a LINK::Classes/Dictionary::.
+
+
+ARGUMENT:: dict
+
+    
+
+ 
+ARGUMENT:: action 
+
+  A function to execute when the server has completed running load
+
+METHOD:: dump
+
+      
+    Dump the state of this object as a LINK::Classes/Dictionary::, which will be passed to the action function provided. This object must first be CODE::fit``ted before ``dump:: can be called.
+
+
+ 
+ARGUMENT:: action 
+
+  A function to execute when the server has completed running dump
+
+METHOD:: read
+
+      
+    Replace the internal state of the object from a JSON file on disk.
+
+
+ARGUMENT:: filename
+
+    
+    Path of the file to load from
+
+
+ 
+ARGUMENT:: action 
+
+  A function to execute when the server has completed running read
+
+METHOD:: write
+
+      
+    Save the internal state of the object to a JSON file on disk. This object must first be CODE::fit:: before CODE::write:: can be called.
+
+
+ARGUMENT:: filename
+
+    
+    Path of the file to load from
+
+
+ 
+ARGUMENT:: action 
+
+  A function to execute when the server has completed running write
+
+ 
+EXAMPLES::
+code::
+s.boot;
+
+~src = Buffer.read(s,FluidFilesPath("Tremblay-UW-ComplexDescent-M.wav"));
+
+// standardize a spectral analysis
+(
+~select = [\centroid,\skewness];
+~features = Buffer(s);
+FluidBufSpectralShape.processBlocking(s,~src,features:~features,select:~select);
+~ds = FluidDataSet(s).fromBuffer(~features);
+"First the Raw Data, then the Standardized Data:".postln;
+~ds.print;
+~norm = FluidNormalize(s).fitTransform(~ds,~ds); // normalize (in place) first to match the ranges
+~ds.print;
+~stand = FluidStandardize(s).fitTransform(~ds,~ds); // standardize then in place again
+~ds.print;
+~ds.dump({
+	arg dict;
+	defer{FluidPlotter(dict:dict,xmin: -1, xmax: 1, ymin: -1, ymax: 1)} //plotter range is +/- one standard deviation
+});
+)
+
+::
+strong::Transforming a single point::
+code::
+
+~src = Buffer.read(s,FluidFilesPath("Tremblay-UW-ComplexDescent-M.wav"));
+
+// standardize a spectral analysis
+(
+~features = Buffer(s);
+FluidBufSpectralShape.processBlocking(s,~src,features:~features);
+~ds = FluidDataSet(s).fromBuffer(~features);
+"Firs the Raw Data, then the Standardized Data:".postln;
+~ds.print;
+~ds_stand = FluidDataSet(s);
+~stand = FluidStandardize(s).fitTransform(~ds,~ds_stand);
+~ds_stand.print;
+)
+
+~singlePoint = Buffer.alloc(s,7);
+
+// take a look at the original via a bar graph. see post window for extreme differences in scale
+(
+~ds.getPoint("0",~singlePoint);
+~singlePoint.loadToFloatArray(action:{
+	arg fa;
+	fa.postln;
+	defer{fa.plot.plotMode_(\bars)};
+});
+)
+
+~scaledPoint = Buffer.alloc(s,7);
+
+// now standardize it using the `fit` from above
+// see the post window to notice that the ranges are now all similar
+(
+~stand.transformPoint(~singlePoint,~scaledPoint);
+~scaledPoint.loadToFloatArray(action:{
+	arg fa;
+	fa.postln;
+	defer{fa.plot.plotMode_(\bars)};
+});
+)
+::
+strong::Server-side Querying::
+code::
+
+(
+{
+	var src = PlayBuf.ar(1,~src,BufRateScale.ir(~src),loop:1);
+	var inputPoint = LocalBuf(2);
+	var outputPoint = LocalBuf(2);
+	var analysis = FluidSpectralShape.kr(src,~select);
+	var standardized, sig;
+
+	analysis.poll(label:"Raw Analysis");
+	FluidKrToBuf.kr(analysis,inputPoint);
+	~stand.kr(Impulse.kr(100),inputPoint,outputPoint);
+	standardized = FluidBufToKr.kr(outputPoint);
+	standardized.poll(label:"Standardized Analysis");
+
+	sig = PitchShift.ar(src,0.2,(standardized * [-5,1]).midiratio,standardized.reverse.abs.midiratio);
+	sig;
+}.play;
+)
+::

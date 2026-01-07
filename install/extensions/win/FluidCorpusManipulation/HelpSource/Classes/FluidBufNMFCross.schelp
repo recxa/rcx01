@@ -1,0 +1,320 @@
+TITLE:: FluidBufNMFCross
+SUMMARY:: Resynthesise a target sound based on a source sound
+CATEGORIES:: Libraries>FluidCorpusManipulation
+RELATED:: Classes/FluidBufNMF,Classes/FluidNMFMatch,Classes/FluidNMFFilter
+DESCRIPTION::
+
+    
+    Uses NMF decomposition to reconstruct a target sound using components learned from a source sound
+
+
+    
+    The process works by attempting to reconstruct components of the CODE::target:: sound using the timbre (i.e., spectra) of the CODE::source:: sound, learned through a Non-negative Matrix Factorisation. The result is a hybrid whose character depends on how well the target can be represented by the source's spectral frames.
+
+    In contrast to LINK::Classes/FluidBufNMF::, each spectral frame of CODE::source:: is a spectral template. Be aware that NMF is O(N^2) in the number of templates, so longer CODE::source:: buffers will take dramatically longer to process.
+
+    See Driedger, J., Prätzlich, T., & Müller, M. (2015). Let it Bee-Towards NMF-Inspired Audio Mosaicing. ISMIR, 350–356. LINK::http://ismir2015.uma.es/articles/13_Paper.pdf::
+
+
+Read more about FluidBufNMFCross on the link::https://learn.flucoma.org/reference/bufnmfcross##learn platform::.
+
+CLASSMETHODS::
+
+METHOD:: process, processBlocking
+  Processs the source LINK::Classes/Buffer:: on the LINK::Classes/Server::. CODE::processBlocking:: will execute directly in the server command FIFO, whereas CODE::process:: will delegate to a separate worker thread. The latter is generally only worthwhile for longer-running jobs where you don't wish to tie up the server.
+
+ARGUMENT:: server
+	The LINK::Classes/Server:: on which the buffers to be processed are allocated.
+
+
+
+
+
+
+
+
+ARGUMENT:: source
+
+    
+    A buffer whose content will supply the spectral bases used in the hybrid. The result will use the spectral frames from this buffer.
+
+
+
+ARGUMENT:: target
+
+    
+    A buffer whose content will supply the temporal activations used in the hybrid. The process aims to "sound like" this buffer using spectra from CODE::source::.
+
+
+
+ARGUMENT:: output
+
+    
+    A buffer to write the new sound to.
+
+
+
+ARGUMENT:: timeSparsity
+
+    
+    Control the repetition of source templates in the reconstruction by specifying a number of frames within which a template should not be re-used. Units are spectral frames. The default is 7.
+
+    STRONG::Constraints::
+
+    LIST::
+    ## 
+    Minimum: CODE::1::
+
+    ## 
+    Snaps to odd numbers
+
+    ::
+
+
+ARGUMENT:: polyphony
+
+    
+    Control the spectral density of the output sound by specifying the maximum number of simultaneous spectral templates from CODE::source:: that can be used. The default is 10.
+
+    STRONG::Constraints::
+
+    LIST::
+    ## 
+    Minimum: CODE::1::
+
+    ## 
+    Maximum: CODE::(FFT Size / 2) + 1 (see fft settings)::
+
+    ## 
+    Snaps to odd numbers
+
+    ::
+
+
+ARGUMENT:: continuity
+
+    
+    Promote the use of N successive source frames, giving greater continuity in the result. This can not be bigger than the size of the CODE::source:: buffer, but useful values tend to be much lower (in the tens). The default is 7.
+
+    STRONG::Constraints::
+
+    LIST::
+    ## 
+    Minimum: CODE::1::
+
+    ## 
+    Snaps to odd numbers
+
+    ::
+
+
+ARGUMENT:: iterations
+
+    
+    How many iterations of NMF to run. The default is 50.
+
+    STRONG::Constraints::
+
+    LIST::
+    ## 
+    Minimum: CODE::1::
+
+    ::
+
+
+ARGUMENT:: windowSize
+
+    
+    The analysis window size in samples. The default is 1024.
+
+
+
+ARGUMENT:: hopSize
+
+    
+    The analysis hop size in samples. The default of -1 indicates half the CODE::windowSize::
+
+
+
+ARGUMENT:: fftSize
+
+    
+    The analysis FFT size in samples The default of -1 indicates CODE::fftSize:: = CODE::windowSize::
+
+
+
+ 
+ARGUMENT:: freeWhenDone
+  Free the server instance when processing complete. Default CODE::true::
+
+ARGUMENT:: action
+	A function to be evaluated once the offline process has finished and all Buffer's instance variables have been updated on the client side. The function will be passed CODE::[features]:: as an argument.
+
+RETURNS:: An instance of the processor
+
+METHOD:: kr
+  Trigger the equivalent behaviour to CODE::processBlocking / process:: from a LINK::Classes/Synth::. Can be useful for expressing a sequence of buffer and data processing jobs to execute. Note that the work still executes on the server command FIFO (not the audio thread), and it is the caller's responsibility to manage the sequencing, using the CODE::done:: status of the various UGens.
+
+
+
+
+
+
+
+ARGUMENT:: source
+
+    
+    A buffer whose content will supply the spectral bases used in the hybrid. The result will use the spectral frames from this buffer.
+
+
+
+ARGUMENT:: target
+
+    
+    A buffer whose content will supply the temporal activations used in the hybrid. The process aims to "sound like" this buffer using spectra from CODE::source::.
+
+
+
+ARGUMENT:: output
+
+    
+    A buffer to write the new sound to.
+
+
+
+ARGUMENT:: timeSparsity
+
+    
+    Control the repetition of source templates in the reconstruction by specifying a number of frames within which a template should not be re-used. Units are spectral frames. The default is 7.
+
+    STRONG::Constraints::
+
+    LIST::
+    ## 
+    Minimum: CODE::1::
+
+    ## 
+    Snaps to odd numbers
+
+    ::
+
+
+ARGUMENT:: polyphony
+
+    
+    Control the spectral density of the output sound by specifying the maximum number of simultaneous spectral templates from CODE::source:: that can be used. The default is 10.
+
+    STRONG::Constraints::
+
+    LIST::
+    ## 
+    Minimum: CODE::1::
+
+    ## 
+    Maximum: CODE::(FFT Size / 2) + 1 (see fft settings)::
+
+    ## 
+    Snaps to odd numbers
+
+    ::
+
+
+ARGUMENT:: continuity
+
+    
+    Promote the use of N successive source frames, giving greater continuity in the result. This can not be bigger than the size of the CODE::source:: buffer, but useful values tend to be much lower (in the tens). The default is 7.
+
+    STRONG::Constraints::
+
+    LIST::
+    ## 
+    Minimum: CODE::1::
+
+    ## 
+    Snaps to odd numbers
+
+    ::
+
+
+ARGUMENT:: iterations
+
+    
+    How many iterations of NMF to run. The default is 50.
+
+    STRONG::Constraints::
+
+    LIST::
+    ## 
+    Minimum: CODE::1::
+
+    ::
+
+
+ARGUMENT:: windowSize
+
+    
+    The analysis window size in samples. The default is 1024.
+
+
+
+ARGUMENT:: hopSize
+
+    
+    The analysis hop size in samples. The default of -1 indicates half the CODE::windowSize::
+
+
+
+ARGUMENT:: fftSize
+
+    
+    The analysis FFT size in samples The default of -1 indicates CODE::fftSize:: = CODE::windowSize::
+
+
+
+ 
+ARGUMENT:: trig
+  A CODE::kr:: signal that will trigger execution
+
+ARGUMENT:: blocking
+  Whether to execute this process directly on the server command FIFO or delegate to a worker thread. See CODE::processBlocking/process:: for caveats.
+
+
+INSTANCEMETHODS::
+
+METHOD:: cancel
+  Cancels non-blocking processing
+
+METHOD:: wait
+  When called in the context of a LINK::Classes/Routine:: (it won't work otherwise), will block execution until the processor has finished. This can be convinient for writing sequences of processes more linearly than using lots of nested actions.
+  
+EXAMPLES::
+code::
+
+(
+~target = Buffer.readChannel(s,FluidFilesPath("Nicol-LoopE-M.wav"),channels:[0]);
+~source = Buffer.readChannel(s,FluidFilesPath("Tremblay-SA-UprightPianoPedalWide.wav"),channels:[0]);
+~output = Buffer(s);
+)
+
+FluidBufNMFCross.processBlocking(s,~source,~target,~output,action:{"done".postln})
+//wait for it to be done. It can take a while, depending on the length of your source.
+~output.play;
+
+//Using the UGen to run the process can be useful to monitor its progress
+(
+Routine{
+	~cross = FluidBufNMFCross.process(s,~source,~target,~output,timeSparsity: 4, polyphony: 3, continuity: 20, windowSize: 2048);
+
+	{
+		FreeSelfWhenDone.kr(~cross.kr).poll;
+	}.play;
+
+	~cross.wait;
+
+	"done".postln;
+
+}.play;
+)
+
+~output.play;
+::

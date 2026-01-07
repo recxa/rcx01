@@ -1,0 +1,331 @@
+TITLE:: FluidMFCC
+SUMMARY:: Mel-Frequency Cepstral Coefficients as Spectral Descriptors in Realtime
+CATEGORIES:: Libraries>FluidCorpusManipulation
+RELATED:: Classes/FluidBufMFCC,Classes/FluidPitch,Classes/FluidMelBands,Classes/FluidLoudness,Classes/FluidSpectralShape,Guides/FluidCorpusManipulation
+DESCRIPTION::
+
+    
+    A classic timbral audio descriptor, the Mel-Frequency Cepstral Coefficients (MFCCs).
+
+
+    
+    MFCC stands for Mel-Frequency Cepstral Coefficients ("cepstral" is pronounced like "kepstral"). This analysis is often used for timbral description and timbral comparison. It compresses the overall spectrum into a smaller number of coefficients that, when taken together, describe the general contour of the spectrum.
+
+    The MFCC values are derived by first computing a mel-frequency spectrum, just as in LINK::Classes/FluidMelBands::. CODE::numCoeffs:: coefficients are then calculated by using that mel-frequency spectrum as input to the discrete cosine transform. This means that the shape of the mel-frequency spectrum is compared to a number of cosine wave shapes (different cosine shapes created from different frequencies). Each MFCC value (i.e., "coefficient") represents how similar the mel-frequency spectrum is to one of these cosine shapes.
+
+    Other than the 0th coefficient, MFCCs are unchanged by differences in the overall energy of the spectrum (which relates to how we perceive loudness). This means that timbres with similar spectral contours, but different volumes, will still have similar MFCC values, other than MFCC 0. To remove any indication of loudness but keep the information about timbre, we can ignore MFCC 0 by setting the parameter CODE::startCoeff:: to 1.
+
+    When CODE::numCoeffs:: is less than CODE::maxNumCoeffs:: the result will be zero-padded on the right so the control stream returned by this object is always CODE::maxNumCoeffs:: channels.
+
+    For an interactive explanation of this relationship, visit LINK::https://learn.flucoma.org/reference/mfcc/explain::.
+
+
+Read more about FluidMFCC on the link::https://learn.flucoma.org/reference/mfcc##learn platform::.
+
+CLASSMETHODS::
+
+METHOD:: kr
+
+ARGUMENT:: in
+
+  Audio-rate signal to analyze
+
+
+
+
+
+
+
+
+ARGUMENT:: numCoeffs
+
+    
+    The number of cepstral coefficients to output. It is limited by the CODE::maxNumCoeffs:: parameter. When the number is smaller than the maximum, the output is zero-padded.
+
+    STRONG::Constraints::
+
+    LIST::
+    ## 
+    Minimum: CODE::2::
+
+    ## 
+    Maximum: MIN(CODE::numBands, maxnumCoeffs::)
+
+    ::
+
+
+ARGUMENT:: numBands
+
+    
+    The number of mel-bands that will be perceptually equally distributed between CODE::minFreq:: and CODE::maxFreq:: to describe the spectral shape before the cepstral coefficients are computed.
+
+    STRONG::Constraints::
+
+    LIST::
+    ## 
+    Minimum: MAX(CODE::numCoeffs, 2::)
+
+    ## 
+    Maximum: MIN(CODE::(FFT Size / 2) + 1 (see fft settings), maxnumBands::)
+
+    ::
+
+
+ARGUMENT:: startCoeff
+
+    
+    The lowest index of the output cepstral coefficients to return, zero-counting. This can be useful to skip over the 0th coefficient (by indicating CODE::startCoeff:: = 1), because the 0th coefficient is representative of the overall energy in spectrum, while the rest of the coefficients are not affected by overall energy, only the mel-frequency spectral contour.
+
+    STRONG::Constraints::
+
+    LIST::
+    ## 
+    Minimum: CODE::0::
+
+    ## 
+    Maximum: CODE::1::
+
+    ::
+
+
+ARGUMENT:: minFreq
+
+    
+    The lower bound of the frequency band to use in analysis, in Hz.
+
+    STRONG::Constraints::
+
+    LIST::
+    ## 
+    Minimum: CODE::0::
+
+    ::
+
+
+ARGUMENT:: maxFreq
+
+    
+    The upper bound of the frequency band to use in analysis, in Hz.
+
+    STRONG::Constraints::
+
+    LIST::
+    ## 
+    Minimum: CODE::0::
+
+    ::
+
+
+ARGUMENT:: windowSize
+
+    
+    The window size. As MFCC computation relies on spectral frames, we need to decide what precision we give it spectrally and temporally. For more information visit LINK::https://learn.flucoma.org/learn/fourier-transform/::
+
+
+
+ARGUMENT:: hopSize
+
+    
+    The window hop size. As MFCC computation relies on spectral frames, we need to move the window forward. It can be any size, but low overlap will create audible artefacts. The -1 default value will default to half of windowSize (overlap of 2).
+
+
+
+ARGUMENT:: fftSize
+
+    
+    The inner FFT/IFFT size. It should be at least 4 samples long, at least the size of the window, and a power of 2. Making it larger allows an oversampling of the spectral precision. The -1 default value will default to windowSize.
+
+
+
+ARGUMENT:: maxFFTSize
+
+    
+    Set an explicit upper bound on the FFT size at object instantiation. The default of CODE::nil:: or -1 sets this to whatever the initial FFT size is
+
+
+
+ARGUMENT:: maxNumCoeffs
+
+    
+    Manually sets a maximum value for CODE::numCoeffs::. Can only be set at object instantiation. Default value of -1 sets this to the initial value of CODE::numCoeffs::
+
+
+
+ARGUMENT:: maxNumBands
+
+    
+    Manually sets a maximum value for CODE::numBands::. Can only be set at object instantiation. Default value of -1 sets this to the initial value of CODE::numBands::
+
+
+
+ 
+ 
+
+RETURNS::     
+    The process will return a stream of CODE::maxNumCoeffs:: MFCCs, which will be repeated if no change happens within the algorithm, i.e. when the hopSize is larger than the host vector size. When CODE::numCoeffs:: is less than CODE::maxNumCoeffs:: the result will be zero-padded on the right so the control stream returned by this object is always CODE::maxNumCoeffs:: channels. Latency is CODE::windowSize:: samples.
+
+
+
+INSTANCEMETHODS::
+  
+EXAMPLES::
+
+code::
+
+// a window to watch the MFCC analyses in realtime
+(
+~win = Window("MFCCs Monitor",Rect(0,0,800,400)).front;
+~ms = MultiSliderView(~win,Rect(0,0,~win.bounds.width,~win.bounds.height)).elasticMode_(1).isFilled_(1);
+~ms.reference_(Array.fill(13,{0.5})); //make a center line to show 0
+)
+
+//play a simple sound to observe the values
+(
+~synth = {
+	arg type = 0;
+	var source = Select.ar(type,[SinOsc.ar(220),Saw.ar(220),Pulse.ar(220)]) * LFTri.kr(0.1).exprange(0.01,0.1);
+	var mfccs = FluidMFCC.kr(source,numCoeffs:13,startCoeff:0,maxNumCoeffs:13);
+	SendReply.kr(Impulse.kr(30),"/mfccs",mfccs);
+	source.dup;
+}.play;
+
+~mfccRange = 40;
+OSCdef(\mfccs,{
+	arg msg;
+	{~ms.value_(msg[3..].linlin(~mfccRange.neg,~mfccRange,0,1))}.defer;
+},"/mfccs");
+)
+
+// change the wave types, observe that, apart from the 0th coefficient, different loudness does not change the values
+~synth.set(\type, 1) // sawtooth wave
+~synth.set(\type, 2) // pulse wave
+~synth.set(\type, 0) // sine wave
+
+~synth.free;
+
+// load a more complex souond
+~tbone = Buffer.read(s,FluidFilesPath("Olencki-TenTromboneLongTones-M.wav"));
+
+// notice now that all these trombone sounds look relatively similar because they're the same timbre, even when the trombone changes pitches
+(
+x = {arg bands = 40;
+	var source = PlayBuf.ar(1,~tbone,loop:1);
+	var mfccs = FluidMFCC.kr(source, numCoeffs: 13, numBands: bands, maxNumCoeffs: 13);
+	SendReply.kr(Impulse.kr(30),"/mfccs",mfccs);
+	source.dup;
+}.play;
+
+~mfccRange = 70;
+OSCdef(\mfccs,{
+	arg msg;
+	{~ms.value_(msg[3..].linlin(~mfccRange.neg,~mfccRange,0,1))}.defer;
+},"/mfccs");
+)
+
+// compare with the timbres of oboe multiphonics
+~oboe = Buffer.read(s,FluidFilesPath("Harker-DS-TenOboeMultiphonics-M.wav"));
+
+(
+x = {
+	arg bands = 40;
+	var source = PlayBuf.ar(1,~oboe,loop:1);
+	var mfccs = FluidMFCC.kr(source, numCoeffs: 13, numBands: bands, maxNumCoeffs: 13);
+	SendReply.kr(Impulse.kr(30),"/mfccs",mfccs);
+	source.dup;
+}.play;
+
+~mfccRange = 70;
+OSCdef(\mfccs,{
+	arg msg;
+	{~ms.value_(msg[3..].linlin(~mfccRange.neg,~mfccRange,0,1))}.defer;
+},"/mfccs");
+)
+
+::
+STRONG::Comparing MFCC Analyses in realtime::
+CODE::
+
+// we'll compare trombone to trombone (but at different playback rates to fake 2 different players
+~buf = Buffer.read(s,FluidFilesPath("Olencki-TenTromboneLongTones-M.wav"));
+
+// the more similar the timbres of the "2" trombonists, the lower the measured "distance" between them will be
+// here, MFCC's timbre measure captures differences in timbre across the trombone range
+// watch for how the more similar the trombone sound, the smaller distance measurement between the 2 analyses
+(
+{
+	var sigA = PlayBuf.ar(1,~buf,BufRateScale.ir(~buf) * 0.9,loop:1);
+	var sigB = PlayBuf.ar(1,~buf,BufRateScale.ir(~buf),loop:1);
+
+	var mfccA = FluidMFCC.kr(sigA,startCoeff:1);
+	var mfccB = FluidMFCC.kr(sigB,startCoeff:1);
+	var dist = Mix((mfccA - mfccB).squared).sqrt;
+	SendReply.kr(Impulse.kr(30),"/dists",dist);
+	[sigA,sigB];
+}.play;
+
+OSCdef(\dists,{
+	arg msg;
+	"\ndistance:\t%\t".format(msg[3].round).post;
+	{"*".post} ! (msg[3] / 5);
+},"/dists");
+)
+
+::
+STRONG::Using Dimensionality Reduction to plot MFCCs in 2D Space::
+
+CODE::
+
+// use mfcc analyses to compare two timbres
+
+(
+~ds = FluidDataSet(s);
+~ds2d = FluidDataSet(s);
+~ds2dN = FluidDataSet(s);
+
+~bass = Buffer.read(s,FluidFilesPath("Tremblay-AaS-AcBassGuit-Melo-M.wav"),numFrames:44100 * 9); // only load the first 9 seconds so they're about the same length
+~box = Buffer.read(s,FluidFilesPath("Green-Box639.wav"));
+~umap = FluidUMAP(s); // algorithm for dimensionality reduction
+~norm = FluidNormalize(s);
+
+// a function that will play the buffer and save MFCCs to a FluidDataSet
+~analyse = {
+	arg buf, name;
+	{
+		var sig = PlayBuf.ar(1,buf,BufRateScale.ir(buf),doneAction:2);
+		var mfccs = FluidMFCC.kr(sig,startCoeff:1);
+		var mfccbuf = LocalBuf(13);
+		var trig = Impulse.kr(5);
+		FluidKrToBuf.kr(mfccs,mfccbuf);
+		FluidDataSetWr.kr(~ds,name,PulseCount.kr(trig),mfccbuf,trig); // write a data point 5 times per second
+		sig.dup;
+	}.play;
+};
+)
+
+// do the analysis with the bass guitar
+~analyse.(~bass,"bass");
+
+// do the analysis with the box
+~analyse.(~box,"box");
+
+// check it out
+~ds.print;
+
+(
+~umap.fitTransform(~ds,~ds2d); // dimensionally reduce the 13 MFCCs into 2D space
+~norm.fitTransform(~ds2d,~ds2dN);
+~ds2dN.dump({
+	arg dict;
+	var labels = Dictionary.newFrom(["data",Dictionary.new]);
+	dict["data"].keys.do{
+		arg key;
+		labels["data"][key] = [key[0..2]];
+	};
+	{
+		~plotter = FluidPlotter(bounds:Rect(0,0,800,800),dict:dict); // plot it: bass analyses will be one color, boxes will be another
+		~plotter.categories_(labels);
+	}.defer;
+});
+)
+
+::

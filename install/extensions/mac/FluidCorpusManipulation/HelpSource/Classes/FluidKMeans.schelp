@@ -1,0 +1,545 @@
+TITLE:: FluidKMeans
+SUMMARY:: Cluster data points with K-Means
+CATEGORIES:: Libraries>FluidCorpusManipulation
+RELATED:: Classes/FluidSKMeans,Classes/FluidKNNClassifier,Classes/FluidMLPClassifier,Classes/FluidDataSet,Classes/FluidLabelSet
+DESCRIPTION::
+
+    
+    Uses the K-means algorithm to learn clusters from a LINK::Classes/FluidDataSet::.
+
+
+    
+    CODE::KMeans:: facilitates learning of clusters from a LINK::Classes/FluidDataSet::. This allows you to assign each point in the data a discrete membership to a group or cluster. The algorithm works by partitioning points into discrete clumps that ideally have EMPHASIS::equal variance::. See the Scitkit-learn reference for a more technical explanation: LINK::https://scikit-learn.org/stable/modules/clustering.html#k-means::
+
+
+Read more about FluidKMeans on the link::https://learn.flucoma.org/reference/kmeans##learn platform::.
+
+CLASSMETHODS::
+
+METHOD:: new
+
+ARGUMENT:: server 
+
+  The LINK::Classes/Server:: on which to construct this object
+ARGUMENT:: numClusters
+
+    
+    The number of clusters to classify data into.
+
+    STRONG::Constraints::
+
+    LIST::
+    ## 
+    Minimum: CODE::1::
+
+    ::
+
+
+ARGUMENT:: maxIter
+
+    
+    The maximum number of iterations the algorithm will use whilst fitting.
+
+    STRONG::Constraints::
+
+    LIST::
+    ## 
+    Minimum: CODE::1::
+
+    ::
+
+
+ 
+ 
+
+INSTANCEMETHODS::
+ 
+METHOD:: numClusters
+
+  Property for code::numClusters::. See CODE::new::
+
+METHOD:: maxIter
+
+  Property for code::maxIter::. See CODE::new::
+
+ METHOD:: fit
+
+      
+    Identify CODE::numClusters:: clusters in a LINK::Classes/FluidDataSet::. It will optimise until no improvement is possible, or up to CODE::maxIter::, whichever comes first. Subsequent calls will continue training from the stopping point with the same conditions.
+
+
+ARGUMENT:: dataSet
+
+    
+    A LINK::Classes/FluidDataSet:: of data points.
+
+
+ 
+ARGUMENT:: action 
+
+  A function to execute when the server has completed running fit
+
+METHOD:: predict
+
+      
+    Given a trained object, return the cluster ID for each data point in a LINK::Classes/FluidDataSet:: to a LINK::Classes/FluidLabelSet::.
+
+
+ARGUMENT:: dataSet
+
+    
+    A LINK::Classes/FluidDataSet:: containing the data to predict.
+
+
+ARGUMENT:: labelSet
+
+    
+    A LINK::Classes/FluidLabelSet:: to retrieve the predicted clusters.
+
+
+ 
+ARGUMENT:: action 
+
+  A function to execute when the server has completed running predict
+
+METHOD:: transform
+
+      
+    Given a trained object, return for each item of a provided LINK::Classes/FluidDataSet:: its distance to each cluster as an array, often referred to as the cluster-distance space.
+
+
+ARGUMENT:: srcDataSet
+
+    
+    A LINK::Classes/FluidDataSet:: containing the data to transform.
+
+
+ARGUMENT:: dstDataSet
+
+    
+    A LINK::Classes/FluidDataSet:: to contain the new cluster-distance space.
+
+
+ 
+ARGUMENT:: action 
+
+  A function to execute when the server has completed running transform
+
+METHOD:: predictPoint
+
+      
+    Given a trained object, return the cluster ID for a data point in a LINK::Classes/Buffer::
+
+
+ARGUMENT:: buffer
+
+    
+    A LINK::Classes/Buffer:: containing a data point.
+
+
+ 
+ARGUMENT:: action 
+
+  A function to execute when the server has completed running predictPoint
+
+METHOD:: transformPoint
+
+      
+    Given a trained object, return the distance of the provided point to each cluster centroid. Both points are handled as LINK::Classes/Buffer::
+
+
+ARGUMENT:: sourceBuffer
+
+    
+    A LINK::Classes/Buffer:: containing a data point.
+
+
+ARGUMENT:: targetBuffer
+
+    
+    A LINK::Classes/Buffer:: to write in the distance to all the cluster centroids.
+
+
+ 
+ARGUMENT:: action 
+
+  A function to execute when the server has completed running transformPoint
+
+METHOD:: fitTransform
+
+      
+    Run CODE::fit:: and CODE::transform:: in a single pass: i.e. train the model on the incoming LINK::Classes/FluidDataSet:: and then return its cluster-distance space in the destination LINK::Classes/FluidDataSet::
+
+
+ARGUMENT:: srcDataSet
+
+    
+    A LINK::Classes/FluidDataSet:: containing the data to fit and transform.
+
+
+ARGUMENT:: dstDataSet
+
+    
+    A LINK::Classes/FluidDataSet:: to contain the new cluster-distance space.
+
+
+ 
+ARGUMENT:: action 
+
+  A function to execute when the server has completed running fitTransform
+
+METHOD:: getMeans
+
+      
+    Given a trained object, retrieve the means (centroids) of each cluster as a LINK::Classes/FluidDataSet::
+
+
+ARGUMENT:: dataSet
+
+    
+    A LINK::Classes/FluidDataSet:: of clusters with a mean per column.
+
+
+ 
+ARGUMENT:: action 
+
+  A function to execute when the server has completed running getMeans
+
+METHOD:: setMeans
+
+      
+    Overwrites the means (centroids) of each cluster, and declare the object trained.
+
+
+ARGUMENT:: dataSet
+
+    
+    A LINK::Classes/FluidDataSet:: of clusters with a mean per column.
+
+
+ 
+ARGUMENT:: action 
+
+  A function to execute when the server has completed running setMeans
+
+METHOD:: fitPredict
+
+      
+    Run CODE::fit:: and CODE::predict:: in a single pass: i.e. train the model on the incoming LINK::Classes/FluidDataSet:: and then return the learned clustering to the passed LINK::Classes/FluidLabelSet::
+
+
+ARGUMENT:: dataSet
+
+    
+    A LINK::Classes/FluidDataSet:: containing the data to fit and predict.
+
+
+ARGUMENT:: labelSet
+
+    
+    A LINK::Classes/FluidLabelSet:: to retrieve the predicted clusters.
+
+
+ 
+ARGUMENT:: action 
+
+  A function to execute when the server has completed running fitPredict
+
+METHOD:: cols
+
+      
+    The number of columns (dimensions) in this model or dataset / labeset
+
+
+ 
+ARGUMENT:: action 
+
+  A function to execute when the server has completed running cols
+
+METHOD:: clear
+
+      
+    Reset the object status to not fitted and untrained.
+
+
+ 
+ARGUMENT:: action 
+
+  A function to execute when the server has completed running clear
+
+METHOD:: size
+
+      
+    The number of data points (entries / observations) in this model or dataset / labeset
+
+
+ 
+ARGUMENT:: action 
+
+  A function to execute when the server has completed running size
+
+METHOD:: load
+
+      
+    Replace the internal state of the object from a LINK::Classes/Dictionary::.
+
+
+ARGUMENT:: dict
+
+    
+
+ 
+ARGUMENT:: action 
+
+  A function to execute when the server has completed running load
+
+METHOD:: dump
+
+      
+    Dump the state of this object as a LINK::Classes/Dictionary::, which will be passed to the action function provided. This object must first be CODE::fit``ted before ``dump:: can be called.
+
+
+ 
+ARGUMENT:: action 
+
+  A function to execute when the server has completed running dump
+
+METHOD:: write
+
+      
+    Save the internal state of the object to a JSON file on disk. This object must first be CODE::fit:: before CODE::write:: can be called.
+
+
+ARGUMENT:: filename
+
+    
+    Path of the file to load from
+
+
+ 
+ARGUMENT:: action 
+
+  A function to execute when the server has completed running write
+
+METHOD:: read
+
+      
+    Replace the internal state of the object from a JSON file on disk.
+
+
+ARGUMENT:: filename
+
+    
+    Path of the file to load from
+
+
+ 
+ARGUMENT:: action 
+
+  A function to execute when the server has completed running read
+
+ 
+EXAMPLES::
+code::
+
+(
+// peek at a didactic dataset
+~ds = FluidDataSet(s).read(FluidFilesPath("../Data/moon.json"));
+~ds.dump({
+	arg dict;
+	defer{
+		~fp = FluidPlotter(dict:dict).pointSizeScale_(3);
+	};
+});
+)
+
+// now keeping that window open, try some different numbers for k
+(
+~kmeans = FluidKMeans(s);
+~ls = FluidLabelSet(s);
+)
+
+// k = the default of 4
+(
+~kmeans.fitPredict(~ds,~ls,{
+	~ls.dump({
+		arg dict;
+		~fp.categories_(dict);
+	});
+});
+)
+
+// k = 2
+(
+~kmeans.numClusters_(2).fitPredict(~ds,~ls,{
+	~ls.dump({
+		arg dict;
+		~fp.categories_(dict);
+	});
+});
+)
+
+// k = 9
+(
+~kmeans.numClusters_(9).fitPredict(~ds,~ls,{
+	~ls.dump({
+		arg dict;
+		~fp.categories_(dict);
+	});
+});
+)
+
+::
+strong::Incremental Training::
+code::
+
+// Keep the window open and run this to see where it's at after each iteration
+
+(
+fork{
+	~kmeans.clear;
+	~kmeans.numClusters_(9);
+	~kmeans.maxIter_(1);
+	10.do{
+		arg i;
+		~kmeans.fitPredict(~ds,~ls,{
+			~ls.dump({
+				arg dict;
+				~fp.categories_(dict);
+			});
+		});
+		"Iteration: %".format(i+1).postln;
+		1.wait;
+	}
+}
+)
+
+::
+strong::Seeding the Means::
+code::
+
+(
+// peek at a didactic dataset
+~ds = FluidDataSet(s).read(FluidFilesPath("../Data/gaussian4.json"));
+~ds.dump({
+	arg dict;
+	defer{
+		~fp = FluidPlotter(dict:dict);
+	};
+});
+)
+
+// keep that window open and let's display where we will
+// seeds the means
+(
+~seeds = [[0.1,0.1],[0.2,0.2],[0.3,0.3],[0.4,0.4]];
+~seeds.do{
+	arg arr, i;
+	~fp.addPoint_("seed-%".format(i),arr[0],arr[1],Color.gray,3);
+}
+)
+
+// do 10 iterations and see where the seeds move to from their starting locations
+(
+fork{
+	// put the seed means that we're going to use in a data set
+	// so that we can set them with FluidKMeans' method "setMeans"
+	~ds_means = FluidDataSet(s).load(
+		Dictionary.newFrom([
+			"cols",2,
+			"data",Dictionary.newFrom([
+				"seed-0",~seeds[0],
+				"seed-1",~seeds[1],
+				"seed-2",~seeds[2],
+				"seed-3",~seeds[3],
+			])
+		])
+	);
+	~kmeans = FluidKMeans(s);
+	~kmeans.setMeans(~ds_means); // set the staring means
+	// set max iter to 1 so we can seen the progress unfold one step at a time
+	~kmeans.maxIter_(1);
+	// labelset for FluidKMeans to write the categories into
+	~ls = FluidLabelSet(s);
+
+	// just do 10 iterations (probably will be enough)
+	10.do{
+		arg i;
+		// do one iteration of fit and write the current category lables
+		~kmeans.fitPredict(~ds,~ls,{
+			~ls.dump({
+				arg dict;
+
+				// set those categories to fluid plotter so we can see the colors
+				~fp.categories_(dict);
+			});
+
+			// also get the means' current positions and...
+			~kmeans.getMeans(~ds_means,{
+				~ds_means.dump({
+					arg dict;
+
+					// update their position on the screen
+					dict["data"].keysValuesDo{
+						arg k, v;
+						~fp.setPoint_("seed-%".format(k),v[0],v[1],Color.gray,3);
+					};
+				});
+			});
+		});
+		"Iteration: %".format(i+1).postln;
+		1.wait;
+	}
+}
+)
+::
+strong::Distances::
+
+Accessing the distances to each point's mean
+code::
+
+(
+// peek at a didactic dataset
+~ds = FluidDataSet(s).read(FluidFilesPath("../Data/gaussian4.json"));
+~ds.dump({
+	arg dict;
+	defer{
+		~fp = FluidPlotter(dict:dict).pointSizeScale_(2);
+	};
+});
+)
+
+// keep that window open and run KMeans analysis, then color the points according to their distance from their mean
+(
+var ds_dist = FluidDataSet(s);
+var ds_means = FluidDataSet(s);
+var kmeans = FluidKMeans(s).maxIter_(300).fitTransform(~ds,ds_dist);
+kmeans.getMeans(ds_means);
+~ds.dump({
+	arg dict;
+	ds_dist.dump({
+		arg dist_dict;
+		ds_means.dump({
+			arg means_dict;
+
+			dist_dict["data"].keysValuesDo{
+				arg id, dist;
+
+				// it provides a distance to every mean, so we'll use the
+				// smallest value
+				dist = dist.minItem;
+				id.postln;
+				dist.postln;
+				~fp.pointColor_(id,Color.hsv(dist * 10,1,1));
+			};
+
+			means_dict["data"].keysValuesDo{
+				arg k, v;
+				~fp.addPoint_("mean-%".format(k),v[0],v[1],Color.gray,3);
+			};
+		});
+	});
+});
+)
+
+::

@@ -1,0 +1,352 @@
+TITLE:: FluidKNNRegressor
+SUMMARY:: Regression with K-Nearest Neighbours
+CATEGORIES:: Libraries>FluidCorpusManipulation
+RELATED:: Classes/FluidKNNClassifier,Classes/FluidDataSet,Classes/FluidMLPRegressor
+DESCRIPTION::
+
+    
+    Regression between DataSets using weighted average of neighbours
+
+
+    
+    KNNRegressor is a supervised machine learning algorithm for regression. In order to make predictions, the KNNRegressor must first be CODE::fit:: with an input LINK::Classes/FluidDataSet:: of data points, each of which is paired (by means of a shared identifier) with another data point in an output DataSet.
+
+    It uses an internal CODE::KDTree:: to find an input point's CODE::numNeighbours:: nearest neighbours in an input dataset. The output returned is a weighted average of those neighbours' values from the output DataSet.
+
+
+Read more about FluidKNNRegressor on the link::https://learn.flucoma.org/reference/knnregressor##learn platform::.
+
+CLASSMETHODS::
+
+METHOD:: new
+
+ARGUMENT:: server 
+
+  The LINK::Classes/Server:: on which to construct this object
+ARGUMENT:: numNeighbours
+
+    
+    Number of neighbours to consider when interpolating the regressed value. The default is 3.
+
+    STRONG::Constraints::
+
+    LIST::
+    ## 
+    Minimum: CODE::1::
+
+    ::
+
+
+ARGUMENT:: weight
+
+    
+    Whether to weight neighbours by distance when predicting new points. The default is 1 (true).
+
+
+
+ 
+ 
+
+INSTANCEMETHODS::
+ 
+METHOD:: numNeighbours
+
+  Property for code::numNeighbours::. See CODE::new::
+
+METHOD:: weight
+
+  Property for code::weight::. See CODE::new::
+
+ METHOD:: fit
+
+      
+    Map an input LINK::Classes/FluidDataSet:: to an output DataSet.
+
+
+ARGUMENT:: sourceDataSet
+
+    
+    input LINK::Classes/FluidDataSet::
+
+
+ARGUMENT:: targetDataSet
+
+    
+    output LINK::Classes/FluidDataSet::
+
+
+ 
+ARGUMENT:: action 
+
+  A function to execute when the server has completed running fit
+
+METHOD:: predict
+
+      
+    Apply learned mapping to a LINK::Classes/FluidDataSet:: and write predictions to an output DataSet
+
+
+ARGUMENT:: sourceDataSet
+
+    
+    input LINK::Classes/FluidDataSet::
+
+
+ARGUMENT:: targetDataSet
+
+    
+    a LINK::Classes/FluidDataSet:: to write the predictions into
+
+
+ 
+ARGUMENT:: action 
+
+  A function to execute when the server has completed running predict
+
+METHOD:: predictPoint
+
+      
+    Apply the learned mapping to a single data point in a LINK::Classes/Buffer::
+
+
+ARGUMENT:: sourceBuffer
+
+    
+    Input point
+
+
+ARGUMENT:: targetBuffer
+
+    
+    Output point
+
+
+ 
+ARGUMENT:: action 
+
+  A function to execute when the server has completed running predictPoint
+
+METHOD:: cols
+
+      
+    The number of columns (dimensions) in this model or dataset / labeset
+
+
+ 
+ARGUMENT:: action 
+
+  A function to execute when the server has completed running cols
+
+METHOD:: clear
+
+      
+    Resets the internal state of the model
+
+
+ 
+ARGUMENT:: action 
+
+  A function to execute when the server has completed running clear
+
+METHOD:: size
+
+      
+    The number of data points (entries / observations) in this model or dataset / labeset
+
+
+ 
+ARGUMENT:: action 
+
+  A function to execute when the server has completed running size
+
+METHOD:: load
+
+      
+    Replace the internal state of the object from a LINK::Classes/Dictionary::.
+
+
+ARGUMENT:: dict
+
+    
+
+ 
+ARGUMENT:: action 
+
+  A function to execute when the server has completed running load
+
+METHOD:: dump
+
+      
+    Dump the state of this object as a LINK::Classes/Dictionary::, which will be passed to the action function provided. This object must first be CODE::fit``ted before ``dump:: can be called.
+
+
+ 
+ARGUMENT:: action 
+
+  A function to execute when the server has completed running dump
+
+METHOD:: write
+
+      
+    Save the internal state of the object to a JSON file on disk. This object must first be CODE::fit:: before CODE::write:: can be called.
+
+
+ARGUMENT:: filename
+
+    
+    Path of the file to load from
+
+
+ 
+ARGUMENT:: action 
+
+  A function to execute when the server has completed running write
+
+METHOD:: read
+
+      
+    Replace the internal state of the object from a JSON file on disk.
+
+
+ARGUMENT:: filename
+
+    
+    Path of the file to load from
+
+
+ 
+ARGUMENT:: action 
+
+  A function to execute when the server has completed running read
+
+ 
+EXAMPLES::
+
+code::
+
+// Making an input dataset of a ramp from 0-1 and an output dataset of a sine wave
+// we'll have the KNNRegressor learn the relationship between the inputs and outputs
+// so that any input value provided will return where on the sine wave (what amplitude)
+// the output should be
+(
+~size = 128;
+~ds_ramp = FluidDataSet(s).load(
+	Dictionary.newFrom([
+		\cols,1,
+		\data,Dictionary.newFrom(
+			~size.collect{arg i;
+				[i,i/~size]; // linear: 128 steps from 0 to (slightly less than) 1
+			}.flat
+		)
+	])
+);
+
+~ds_sine = FluidDataSet(s).load(
+	Dictionary.newFrom([
+		\cols,1,
+		\data,Dictionary.newFrom(
+			~size.collect{
+				arg i;
+				[i,sin(2pi*i/~size)]; // sine wave
+			}.flat;
+		)
+	])
+);
+)
+
+// fit to make the KNNRegressor learn the relationship between inputs and outputs
+~regressor = FluidKNNRegressor(s).fit(~ds_ramp,~ds_sine);
+
+// predicting with input dataset should give us what we expect: something that
+// looks like a sine wave.
+(
+~predictions = FluidDataSet(s);
+~regressor.predict(~ds_ramp,~predictions,{
+	~predictions.dump({
+		arg dict;
+		var array = Array.newClear(~size);
+		dict["data"].keysValuesDo{
+			arg id, v;
+			array[id.asInteger] = v[0];
+		};
+		{array.plot}.defer;
+	});
+});
+)
+
+// now instead of using the linear ramp to derive the output, we'll use a warped ramp: an exponetial curve
+// make that dataset to use as input:
+(
+~ds_exponential = FluidDataSet(s).load(
+	Dictionary.newFrom([
+		\cols,1,
+		\data,Dictionary.newFrom(
+			~size.collect{arg i;
+				[i,(i/~size)**2];
+			}.flat;
+		)
+	])
+);
+)
+
+// use the regressor to make predictions based on that input:
+(
+~regressor.predict(~ds_exponential,~predictions,{
+	~predictions.dump({
+		arg dict;
+		var array = Array.newClear(~size);
+		dict["data"].keysValuesDo{
+			arg id, v;
+			array[id.asInteger] = v[0];
+		};
+		array.postln;
+		{array.plot}.defer;
+	});
+});
+)
+
+// just for fun let's use the sine wave ds as input...
+// notice that all the negative values of the sine wave
+// (the second half) are going to have the same three nearest
+// neighbours and therefore the same value for their prediction!
+(
+~regressor.predict(~ds_sine,~predictions,{
+	~predictions.dump({
+		arg dict;
+		var array = Array.newClear(~size);
+		dict["data"].keysValuesDo{
+			arg id, v;
+			array[id.asInteger] = v[0];
+		};
+		array.postln;
+		{array.plot}.defer;
+	});
+});
+)
+
+::
+strong::single point transform on arbitrary value::
+code::
+~inbuf = Buffer.loadCollection(s,[0.3]);
+~outbuf = Buffer(s);
+
+~regressor.predictPoint(~inbuf, ~outbuf, {~outbuf.getn(0,1,{|x|x.postln;})});
+::
+
+subsection:: Server Side Queries
+
+code::
+//we are here querying with a saw in control rate, all on the server, via a buffer interface
+(
+{
+	var input = Saw.kr(2).linlin(-1,1,0,1);
+	var trig = Impulse.kr(ControlRate.ir/10);
+	var inputPoint = LocalBuf(1);
+	var outputPoint = LocalBuf(1);
+	BufWr.kr(input,inputPoint,0);
+	~regressor.kr(trig,inputPoint,outputPoint);
+	BufRd.kr(1,outputPoint,0);
+}.scope
+)
+
+::

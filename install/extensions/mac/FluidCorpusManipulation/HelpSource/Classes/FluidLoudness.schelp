@@ -1,0 +1,175 @@
+TITLE:: FluidLoudness
+SUMMARY:: A Loudness and True-Peak Descriptor in Realtime
+CATEGORIES:: Libraries>FluidCorpusManipulation
+RELATED:: Classes/FluidBufLoudness,Classes/FluidPitch,Classes/FluidMelBands,Classes/FluidMFCC,Classes/FluidSpectralShape,Guides/FluidCorpusManipulation,Classes/Amplitude
+DESCRIPTION::
+
+    
+    Two loudness descriptors, with a ITU BS 1770 mode
+
+
+    
+    Computes the true peak of the signal as well as applying the filters proposed by broadcasting standards to emulate the perception of amplitude.
+
+    The process will return a multichannel control stream with [loudness, truepeak] values, both in dBFS, which will be repeated if no change happens within the algorithm, i.e. when the hopSize is larger than the signal vector size. More information on broadcasting standardisation of loudness measurement is available at the reference page ( LINK::https://tech.ebu.ch/docs/tech/tech3341.pdf:: ) and in more musician-friendly explantions here (LINK::http://designingsound.org/2013/02/06/loudness-and-metering-part-1/::).
+
+
+Read more about FluidLoudness on the link::https://learn.flucoma.org/reference/loudness##learn platform::.
+
+CLASSMETHODS::
+
+METHOD:: kr
+
+ARGUMENT:: in
+
+  Audio-rate signal to analyze
+
+
+
+
+
+
+
+
+ARGUMENT:: select
+
+    
+    An array of CODE::symbols:: indicating which analyses to return. The options are CODE::loudness:: and CODE::peak::. If nothing is specified, the object will return all the analyses. The analyses will always appear in their normal order, this argument just allows for a selection of them to be returned. Reordering the options in this argument will not reorder how the analyses are returned.
+
+
+
+ARGUMENT:: kWeighting
+
+    
+    A flag to switch the perceptual model of loudness. On by default, removing it makes the algorithm more CPU efficient by reverting to a simple RMS of the frame.
+
+
+
+ARGUMENT:: truePeak
+
+    
+    A flag to switch the computation of TruePeak. On by default, removing it makes the algorithm more CPU efficient by reverting to a simple absolute peak of the frame.
+
+
+
+ARGUMENT:: windowSize
+
+    
+    The size of the window on which the computation is done. By default 1024 to be similar with all other FluCoMa objects, the EBU specifies 400ms, which is 17640 samples at 44100.
+
+    STRONG::Constraints::
+
+    LIST::
+    ## 
+    Maximum: CODE::maxWindowSize::
+
+    ::
+
+
+ARGUMENT:: hopSize
+
+    
+    How much the buffered window moves forward, in samples. By default 512 to be similar with all other FluCoMa objects, the EBU specifies 100ms, which is 4410 samples at 44100.
+
+    STRONG::Constraints::
+
+    LIST::
+    ## 
+    Minimum: CODE::1::
+
+    ::
+
+
+ 
+ARGUMENT:: maxWindowSize
+
+    
+    How large can the windowSize be, by allocating memory at instantiation time. This cannot be modulated.
+
+    STRONG::Constraints::
+
+    LIST::
+    ## 
+    Minimum: CODE::4::
+
+    ## 
+    Maximum: CODE::32768::
+
+    ## 
+    Snaps to powers of two
+
+    :: 
+
+RETURNS::     
+    A 2-channel KR signal with the [loudness, peak] descriptors. The latency is windowSize.
+
+
+
+INSTANCEMETHODS::
+  
+EXAMPLES::
+code::
+
+~src = Buffer.read(s,FluidFilesPath("Nicol-LoopE-M.wav"));
+
+(
+~synth = {
+	var src = PlayBuf.ar(1,~src,BufRateScale.ir(~src),loop:1);
+	var loudness = FluidLoudness.kr(src);
+	var noise = PinkNoise.ar(loudness[0].dbamp);
+
+	loudness[0].poll(label:"Loudness:");
+	loudness[1].poll(label:"TruePeak:");
+	0.poll(label:"---------------------");
+
+	src = DelayN.ar(src,0.1,1024*SampleDur.ir); // delay to compensate for latency
+	[src * -6.dbamp,noise];
+}.play;
+)
+
+::
+strong::EBU Standards::
+The EBU standard specifies that the window should be 400ms long, and update every 100ms, for instantaneous loudness. Here we set the windowSize and hopSize appropriately using SampleRate.ir. Various test signals are loaded.
+code::
+
+(
+~synth = {
+	arg freq=220, type = 1, noise = 0;
+	var source = PinkNoise.ar(noise) + Select.ar(type,[
+		DC.ar(),
+		SinOsc.ar(freq,mul:0.1),
+		VarSaw.ar(freq,mul:0.1),
+		Saw.ar(freq,0.1),
+		Pulse.ar(freq,mul:0.1)
+	]);
+	var loudness = FluidLoudness.kr(source,windowSize:SampleRate.ir*0.4,hopSize:SampleRate.ir*0.1);
+
+	loudness[0].poll(label:"Loudness:");
+	loudness[1].poll(label:"TruePeak:");
+	0.poll(label:"---------------------");
+
+	source.dup;
+}.play;
+)
+
+// change the various frequencies to see the impact of the filter for the loudness. The TruePeak is steady.
+~synth.set(\freq, 440)
+~synth.set(\freq, 110)
+~synth.set(\freq, 55)
+~synth.set(\freq, 3000)
+~synth.set(\freq, 9000)
+
+// adding harmonics, by changing to triangle (2), saw (3) or square (4) shows that spectral algo are more resilient when signal are richer
+~synth.set(\type, 2)
+~synth.set(\type, 3)
+~synth.set(\type, 4)
+
+// adding noise shows its impact on loudness
+~synth.set(\noise, 0.25)
+
+// and removing the oscilator
+~synth.set(\type, 0)
+
+// and measuring silence
+~synth.set(\noise, 0)
+::

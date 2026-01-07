@@ -1,0 +1,414 @@
+TITLE:: FluidNormalize
+SUMMARY:: Normalize a FluidDataSet
+CATEGORIES:: Libraries>FluidCorpusManipulation
+RELATED:: Classes/FluidStandardize,Classes/FluidRobustScale,Classes/FluidDataSet
+DESCRIPTION::
+
+    
+    Normalize a LINK::Classes/FluidDataSet:: or single point of data according to learnt minimum and maximum values.
+
+
+    
+
+Read more about FluidNormalize on the link::https://learn.flucoma.org/reference/normalize##learn platform::.
+
+CLASSMETHODS::
+
+METHOD:: new
+
+ARGUMENT:: server 
+
+  The LINK::Classes/Server:: on which to construct this object
+ARGUMENT:: min
+
+    
+    Minimum output value, default 0
+
+
+
+ARGUMENT:: max
+
+    
+    Maximum output value, default 1
+
+
+
+ 
+ 
+
+INSTANCEMETHODS::
+ 
+METHOD:: min
+
+  Property for code::min::. See CODE::new::
+
+METHOD:: max
+
+  Property for code::max::. See CODE::new::
+
+ METHOD:: fit
+
+      
+    Compute the normalization factors from a LINK::Classes/FluidDataSet:: and store them internally.
+
+
+ARGUMENT:: dataSet
+
+    
+    The LINK::Classes/FluidDataSet:: to normalize
+
+
+ 
+ARGUMENT:: action 
+
+  A function to execute when the server has completed running fit
+
+METHOD:: fitTransform
+
+      
+    Normalize a LINK::Classes/FluidDataSet:: and copy the results to LINK::Classes/FluidDataSet::.
+
+
+ARGUMENT:: sourceDataSet
+
+    
+    The LINK::Classes/FluidDataSet:: to normalize
+
+
+ARGUMENT:: destDataSet
+
+    
+    The LINK::Classes/FluidDataSet:: to populate with normalized data
+
+
+ 
+ARGUMENT:: action 
+
+  A function to execute when the server has completed running fitTransform
+
+METHOD:: transform
+
+      
+    Transform a LINK::Classes/FluidDataSet:: using learned extrema from CODE::fit:: and copy the results to the destination LINK::Classes/FluidDataSet::.
+
+
+ARGUMENT:: sourceDataSet
+
+    
+    The LINK::Classes/FluidDataSet:: to normalize
+
+
+ARGUMENT:: destDataSet
+
+    
+    The LINK::Classes/FluidDataSet:: to populate with normalized data
+
+
+ 
+ARGUMENT:: action 
+
+  A function to execute when the server has completed running transform
+
+METHOD:: transformPoint
+
+      
+    Normalize a single data point, using the learned extrema from a previous call to CODE::fit::
+
+
+ARGUMENT:: sourceBuffer
+
+    
+    A LINK::Classes/Buffer:: with the new data point
+
+
+ARGUMENT:: destBuffer
+
+    
+    A LINK::Classes/Buffer:: to contain the normalized value
+
+
+ 
+ARGUMENT:: action 
+
+  A function to execute when the server has completed running transformPoint
+
+METHOD:: inverseTransform
+
+      
+    Un-normalize LINK::Classes/FluidDataSet::, using the learned statistics from a previous call to CODE::fit::.
+
+
+ARGUMENT:: sourceDataSet
+
+    
+    The LINK::Classes/FluidDataSet:: to of data to transform from the normalized scale to the original scale.
+
+
+ARGUMENT:: destDataSet
+
+    
+    The LINK::Classes/FluidDataSet:: to write the transformed data to.
+
+
+ 
+ARGUMENT:: action 
+
+  A function to execute when the server has completed running inverseTransform
+
+METHOD:: inverseTransformPoint
+
+      
+    Un-normalize a data point, using the learned statistics from a previous call to CODE::fit::
+
+
+ARGUMENT:: sourceBuffer
+
+    
+    A LINK::Classes/Buffer:: with the data in the normalized range
+
+
+ARGUMENT:: destBuffer
+
+    
+    A LINK::Classes/Buffer:: to write the output of the transformation to
+
+
+ 
+ARGUMENT:: action 
+
+  A function to execute when the server has completed running inverseTransformPoint
+
+METHOD:: cols
+
+      
+    The number of columns (dimensions) in this model or dataset / labeset
+
+
+ 
+ARGUMENT:: action 
+
+  A function to execute when the server has completed running cols
+
+METHOD:: clear
+
+      
+    Resets the internal state of the model
+
+
+ 
+ARGUMENT:: action 
+
+  A function to execute when the server has completed running clear
+
+METHOD:: size
+
+      
+    The number of data points (entries / observations) in this model or dataset / labeset
+
+
+ 
+ARGUMENT:: action 
+
+  A function to execute when the server has completed running size
+
+METHOD:: load
+
+      
+    Replace the internal state of the object from a LINK::Classes/Dictionary::.
+
+
+ARGUMENT:: dict
+
+    
+
+ 
+ARGUMENT:: action 
+
+  A function to execute when the server has completed running load
+
+METHOD:: dump
+
+      
+    Dump the state of this object as a LINK::Classes/Dictionary::, which will be passed to the action function provided. This object must first be CODE::fit``ted before ``dump:: can be called.
+
+
+ 
+ARGUMENT:: action 
+
+  A function to execute when the server has completed running dump
+
+METHOD:: read
+
+      
+    Replace the internal state of the object from a JSON file on disk.
+
+
+ARGUMENT:: filename
+
+    
+    Path of the file to load from
+
+
+ 
+ARGUMENT:: action 
+
+  A function to execute when the server has completed running read
+
+METHOD:: write
+
+      
+    Save the internal state of the object to a JSON file on disk. This object must first be CODE::fit:: before CODE::write:: can be called.
+
+
+ARGUMENT:: filename
+
+    
+    Path of the file to load from
+
+
+ 
+ARGUMENT:: action 
+
+  A function to execute when the server has completed running write
+
+ 
+EXAMPLES::
+code::
+
+~src = Buffer.read(s,FluidFilesPath("Tremblay-UW-ComplexDescent-M.wav"));
+
+// pitch analysis
+(
+fork({
+	~pitch = Buffer(s);
+	FluidBufPitch.processBlocking(s,~src,features:~pitch);
+	s.sync;
+
+	// using plot here rather than FluidWaveform to see the scales (on the left axis)
+	~pitch.plot(separately:true);
+},AppClock);
+)
+
+// get analyses from buffer to dataset
+(
+~ds = FluidDataSet(s).fromBuffer(~pitch);
+~ds.print;
+)
+
+// normalize it in place, overwriting the dataset
+(
+~normalizer = FluidNormalize(s).fitTransform(~ds,~ds);
+~ds.print;
+)
+
+// get it back to a buffer, plot the buffer to see the ranges
+(
+fork({
+	~normed = Buffer(s);
+	~ds.toBuffer(~normed);
+	s.sync;
+	~normed.plot(separately:true);
+},AppClock);
+)
+
+::
+strong::Server side queries::
+code::
+(
+{
+	var src = PlayBuf.ar(1,~src,BufRateScale.ir(~src),loop:1);
+	var pitch = FluidPitch.kr(src);
+	var inputPoint = LocalBuf(2);
+	var outputPoint = LocalBuf(2);
+	var trig = Impulse.kr(30);
+	var normed;
+	FluidKrToBuf.kr(pitch,inputPoint);
+	~normalizer.kr(trig,inputPoint,outputPoint);
+	normed = FluidBufToKr.kr(outputPoint);
+
+	pitch[0].poll(label:"pitch                       ");
+	normed[0].poll(label:"normalized pitch            ");
+	0.poll(label:"-------------------");
+	pitch[1].poll(label:"pitch confidence            ");
+	normed[1].poll(label:"normalized pitch confidence ");
+	0.poll(label:"--------------------------------------");
+	0.poll(label:"--------------------------------------");
+
+	src.dup;
+}.play;
+)
+::
+strong::Comparing Scalers::
+code::
+
+~src = Buffer.readChannel(s,FluidFilesPath("Olencki-TenTromboneLongTones-M.wav"),channels:[0]);
+
+// spectral analysis
+(
+~select = [\skewness,\flatness];
+~features = Buffer(s);
+FluidBufSpectralShape.processBlocking(s,~src,features:~features,select:~select);
+~ds = FluidDataSet(s).fromBuffer(~features);
+~ds.print;
+)
+
+// scale using Normalize, Standardize, and RobustScale
+(
+~ds_norm = FluidDataSet(s);
+~ds_stan = FluidDataSet(s);
+~ds_robu = FluidDataSet(s);
+FluidNormalize(s).fitTransform(~ds,~ds_norm);
+FluidStandardize(s).fitTransform(~ds,~ds_stan);
+~robu = FluidRobustScale(s).fitTransform(~ds,~ds_robu);
+~ds_norm.print;
+~ds_stan.print;
+~ds_robu.print;
+)
+
+// plot the three scalers
+(
+~ds_norm.dump({
+	arg dict_norm;
+	~ds_stan.dump({
+		arg dict_stan;
+		~ds_robu.dump({
+			arg dict_robu;
+
+			defer{
+				var win = Window("Comparing Scalers",Rect(0,0,1500,500));
+				var comp = CompositeView(win,win.bounds);
+				comp.layout_(
+					HLayout(
+						*[dict_norm,dict_stan,dict_robu].collect{
+							arg dict;
+							FluidPlotter(
+								win,
+								standalone:false,
+								dict:dict,
+								xmin:-3,
+								xmax:3,
+								ymin:-3,
+								ymax:3
+							);
+						};
+					)
+				);
+
+				UserView(win,win.bounds)
+				.drawFunc_{
+					Pen.stringInRect("All plots are the same data with different scalers.\nAll axes are from -3 to 3.",Rect(20,30,win.bounds.width * 0.3,40),color:Color.blue);
+					["Normalize","Standardize","RobustScale"].do{
+						arg name, i;
+						Pen.stringAtPoint(name,Point((i * win.bounds.width * 0.33) + 20,15),color:Color.red);
+					};
+					Pen.stringInRect("In this case, RobustScale keeps more of the data centred around 0 in both\ndimensions than Standardize (and of course better than Normalize).\nNotice however that there's a lot of data \"off-plot\" with RobustScale.",Rect(win.bounds.width * 0.67,win.bounds.height * 0.88,win.bounds.width * 0.3,win.bounds.height * 0.3),color:Color.blue);
+				};
+
+				win.front;
+			};
+		});
+	});
+});
+)
+
+::

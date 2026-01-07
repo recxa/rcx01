@@ -1,0 +1,409 @@
+TITLE:: FluidPCA
+SUMMARY:: Principal Component Analysis
+CATEGORIES:: Libraries>FluidCorpusManipulation
+RELATED:: Classes/FluidUMAP,Classes/FluidMDS,Classes/FluidDataSet
+DESCRIPTION::
+
+    
+    Principal Components Analysis (PCA) of a LINK::Classes/FluidDataSet::.
+
+
+    
+    PCA fits to a DataSet to determine its principal components, each of which is a new axis through the data that maximises the variance, or “differences”, within the Data. PCA can then transform the original DataSet or individual points to position them in relation to the principal components (i.e., “new axes”) for better comparing how they differ from other points in the DataSet. PCA is often used for dimensionality reduction and is also useful for removing redundancy (i.e., correlation) and/or noise (i.e., dimensions that are uniformly distributed) from a DataSet.
+
+
+Read more about FluidPCA on the link::https://learn.flucoma.org/reference/pca##learn platform::.
+
+CLASSMETHODS::
+
+METHOD:: new
+
+ARGUMENT:: server 
+
+  The LINK::Classes/Server:: on which to construct this object
+ARGUMENT:: numDimensions
+
+    
+    The number of dimensions (principal components) to keep after a CODE::transform::, using PCA for dimensionality reduction.
+
+    STRONG::Constraints::
+
+    LIST::
+    ## 
+    Minimum: CODE::1::
+
+    ::
+
+
+ARGUMENT:: whiten
+
+    
+    A flag (0 or 1) indicating whether or not to perform "whitening" on the output of PCA. For more information on whitening, visit LINK::https://learn.flucoma.org/reference/pca::
+
+
+
+ 
+ 
+
+INSTANCEMETHODS::
+ 
+METHOD:: numDimensions
+
+  Property for code::numDimensions::. See CODE::new::
+
+METHOD:: whiten
+
+  Property for code::whiten::. See CODE::new::
+
+ METHOD:: fit
+
+      
+    Train this model on a LINK::Classes/FluidDataSet:: to determine the principal components, but don't transform any data.
+
+
+ARGUMENT:: dataSet
+
+    
+    A LINK::Classes/FluidDataSet:: to analyse
+
+
+ 
+ARGUMENT:: action 
+
+  A function to execute when the server has completed running fit
+
+METHOD:: transform
+
+      
+    Given a trained model, transform a source LINK::Classes/FluidDataSet:: into the PCA-space and write to a destination DataSet. The DataSets can be the same for both input and output (performs the operation in-place). This process returns the fraction (between 0 and 1) of explained variance. The minimum number of points in the CODE::source:: DataSet should be equal or greater than CODE::numDimensions::.
+
+
+ARGUMENT:: sourceDataSet
+
+    
+    source DataSet
+
+
+ARGUMENT:: destDataSet
+
+    
+    destination DataSet
+
+
+ 
+ARGUMENT:: action 
+
+  A function to execute when the server has completed running transform
+
+METHOD:: fitTransform
+
+      
+    CODE::fit:: and CODE::transform:: in a single pass. Returns the fraction (between 0 and 1) of explained variance. The minimum number of points in the CODE::source:: DataSet should be equal or greater than CODE::numDimensions::.
+
+
+ARGUMENT:: sourceDataSet
+
+    
+    source DataSet
+
+
+ARGUMENT:: destDataSet
+
+    
+    destination DataSet
+
+
+ 
+ARGUMENT:: action 
+
+  A function to execute when the server has completed running fitTransform
+
+METHOD:: inverseTransform
+
+      
+    Given a trained model, invert a source LINK::Classes/FluidDataSet:: containing CODE::numDimensions:: dimensions that are in PCA-space to a destination LINK::Classes/FluidDataSet:: with the dimensionality of the data that was used to CODE::fit::. LINK::Classes/FluidDataSet:: can be the same for both input and output (the operation will be performed in-place).
+
+
+ARGUMENT:: sourceDataSet
+
+    
+    source DataSet
+
+
+ARGUMENT:: destDataSet
+
+    
+    destination DataSet
+
+
+ 
+ARGUMENT:: action 
+
+  A function to execute when the server has completed running inverseTransform
+
+METHOD:: transformPoint
+
+      
+    Given a trained model, transform the data point in CODE::sourceBuffer:: from the original dimensional space to CODE::numDimensions:: in PCA-space and write the result into CODE::destBuffer::.
+
+
+ARGUMENT:: sourceBuffer
+
+    
+    Input data
+
+
+ARGUMENT:: destBuffer
+
+    
+    Output data
+
+
+ 
+ARGUMENT:: action 
+
+  A function to execute when the server has completed running transformPoint
+
+METHOD:: inverseTransformPoint
+
+      
+    Given a trained model, transform the data point in CODE::sourceBuffer:: from being CODE::numDimensions:: in PCA-space into the original dimensional space and write into CODE::destBuffer::.
+
+
+ARGUMENT:: sourceBuffer
+
+    
+    Input data
+
+
+ARGUMENT:: destBuffer
+
+    
+    Output data
+
+
+ 
+ARGUMENT:: action 
+
+  A function to execute when the server has completed running inverseTransformPoint
+
+METHOD:: cols
+
+      
+    The number of columns (dimensions) in this model or dataset / labeset
+
+
+ 
+ARGUMENT:: action 
+
+  A function to execute when the server has completed running cols
+
+METHOD:: size
+
+      
+    The number of data points (entries / observations) in this model or dataset / labeset
+
+
+ 
+ARGUMENT:: action 
+
+  A function to execute when the server has completed running size
+
+METHOD:: clear
+
+      
+    Resets the internal state of the model
+
+
+ 
+ARGUMENT:: action 
+
+  A function to execute when the server has completed running clear
+
+METHOD:: load
+
+      
+    Replace the internal state of the object from a LINK::Classes/Dictionary::.
+
+
+ARGUMENT:: dict
+
+    
+
+ 
+ARGUMENT:: action 
+
+  A function to execute when the server has completed running load
+
+METHOD:: dump
+
+      
+    Dump the state of this object as a LINK::Classes/Dictionary::, which will be passed to the action function provided. This object must first be CODE::fit``ted before ``dump:: can be called.
+
+
+ 
+ARGUMENT:: action 
+
+  A function to execute when the server has completed running dump
+
+METHOD:: read
+
+      
+    Replace the internal state of the object from a JSON file on disk.
+
+
+ARGUMENT:: filename
+
+    
+    Path of the file to load from
+
+
+ 
+ARGUMENT:: action 
+
+  A function to execute when the server has completed running read
+
+METHOD:: write
+
+      
+    Save the internal state of the object to a JSON file on disk. This object must first be CODE::fit:: before CODE::write:: can be called.
+
+
+ARGUMENT:: filename
+
+    
+    Path of the file to load from
+
+
+ 
+ARGUMENT:: action 
+
+  A function to execute when the server has completed running write
+
+ 
+EXAMPLES::
+strong::Dimensionality Reduction::
+code::
+
+s.boot;
+
+~src = Buffer.read(s,FluidFilesPath("Tremblay-ASWINE-ScratchySynth-M.wav"));
+
+// load MFCC analyses into a dataset
+(
+~mfcc_feature = Buffer(s);
+FluidBufMFCC.processBlocking(s,~src,startCoeff:1,features:~mfcc_feature);
+~ds = FluidDataSet(s).fromBuffer(~mfcc_feature);
+~ds.print;
+~ds2stan = FluidDataSet(s);
+~ds2st2d = FluidDataSet(s);
+~ds2st_2d_n = FluidDataSet(s);
+)
+
+// first standardize our DataSet, so that the MFCC dimensions are in similar ranges
+// then apply the PCA in-place on the standardized data,
+// reducing the number of dimensions to the default of 2
+// lastly normalize it so it can be plotted in a normalized space
+(
+~stand = FluidStandardize(s).fitTransform(~ds,~ds2stan);
+~pca = FluidPCA(s).fitTransform(~ds2stan,~ds2st2d);
+~norm = FluidNormalize(s).fitTransform(~ds2st2d,~ds2st_2d_n);
+~ds2st_2d_n.dump({
+	arg dict;
+	defer{FluidPlotter(dict:dict)};
+});
+)
+::
+strong::Server-side queries::
+code::
+(
+{
+	var src = PlayBuf.ar(1,~src,BufRateScale.ir(~src),loop:1);
+	var mfccs = FluidMFCC.kr(src,startCoeff:1);
+	var trig = Impulse.kr(30);
+	var inputPoint = LocalBuf(13);
+	var standPoint = LocalBuf(13);
+	var outputPoint = LocalBuf(2);
+	var normPoint = LocalBuf(2);
+	var sig, pca1, pca2;
+
+	FluidKrToBuf.kr(mfccs,inputPoint);
+	~stand.kr(trig,inputPoint,standPoint);
+	~pca.kr(trig, standPoint, outputPoint,2);
+	~norm.kr(trig,outputPoint,normPoint);
+
+	# pca1, pca2 = FluidBufToKr.kr(normPoint).lag(0.01).poll;
+
+	sig = CombC.ar(src,0.05,[1-pca1,pca2].clip * 0.05,(1-pca1).clip * 3,-16.dbamp) + src;
+
+	sig;
+}.play;
+)
+::
+strong::Whitening::
+code::
+
+// without whitening (left plot), principal component 1 (x axis) clearly has a longer variance,
+// as it should, than principal component 2 (y axis). with whitening, both PCs have unit variance.
+// (both plots have the same ranges for their axes). because of this change in relative *scale* the
+// distances used to compute the clusters will be different, and will very likely end up with different
+// clusters! (run it a few times to see the varieties)
+
+~src = Buffer.readChannel(s,FluidFilesPath("Tremblay-ASWINE-ScratchySynth-M.wav"),channels:[0]);
+
+// load analyses into a dataset
+(
+~analysis = Buffer(s);
+FluidBufSpectralShape.processBlocking(s,~src,features:~analysis);
+// FluidBufMFCC.processBlocking(s,~src,startCoeff:1,features:~analysis);
+~ds = FluidDataSet(s).fromBuffer(~analysis);
+~ds.print;
+
+~stand = FluidStandardize(s).fitTransform(~ds,~ds); // note: standardize in place
+
+~ds_pca = FluidDataSet(s);
+~pca = FluidPCA(s).fitTransform(~ds,~ds_pca);
+~ls = FluidLabelSet(s);
+FluidKMeans(s,4).fitPredict(~ds_pca,~ls);
+
+~ds_pca_white = FluidDataSet(s);
+~pca_white = FluidPCA(s,whiten:1).fitTransform(~ds,~ds_pca_white);
+~ls_white = FluidLabelSet(s);
+FluidKMeans(s,4).fitPredict(~ds_pca_white,~ls_white);
+
+~norm = FluidNormalize(s).fit(~ds_pca);
+~norm_white = FluidNormalize(s).fit(~ds_pca_white);
+
+~ds_pca.dump({
+	arg dict;
+	~ds_pca_white.dump({
+		arg dict_white;
+		~ls.dump({
+			arg labels;
+			~ls_white.dump({
+				arg labels_white;
+				~norm.dump({
+					arg norm;
+					~norm_white.dump({
+						arg norm_white;
+						var min = min(norm["data_min"].minItem,norm_white["data_min"].minItem);
+						var max = max(norm["data_max"].maxItem,norm_white["data_max"].maxItem);
+
+						defer{
+							var win = Window(bounds:Rect(0,0,1000,500));
+							win.layout_(
+								HLayout(
+									FluidPlotter(dict:dict,xmin:min,xmax:max,ymin:min,ymax:max,standalone:false).categories_(labels),
+									FluidPlotter(dict:dict_white,xmin:min,xmax:max,ymin:min,ymax:max,standalone:false).categories_(labels_white)
+								)
+							);
+							win.front;
+						};
+					});
+				});
+			});
+		});
+	});
+});
+)
+::

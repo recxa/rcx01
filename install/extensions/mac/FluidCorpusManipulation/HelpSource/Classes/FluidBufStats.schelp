@@ -1,0 +1,743 @@
+TITLE:: FluidBufStats
+SUMMARY:: Statistically summarise a time series in a Buffer
+CATEGORIES:: Libraries>FluidCorpusManipulation
+RELATED:: Classes/FluidBufLoudness,Classes/FluidBufPitch,Classes/FluidBufMelBands,Classes/FluidBufMFCC,Classes/FluidBufSpectralShape,Guides/FluidCorpusManipulation
+DESCRIPTION::
+
+    
+    Statistical analysis on buffer channels.
+
+
+    
+    LINK::Classes/FluidBufStats:: statistically summarises a time-series (or any values) that is in a buffer, returning seven statistics for each channel: the buffer channel's mean, standard deviation, skewness, kurtosis, low, middle, and high values. See the CODE::low::, CODE::middle:: and CODE::high:: parameters below for more description on these values.
+
+    For a detailed explanation of LINK::Classes/FluidBufStats:: features visit LINK::http://learn.flucoma.org/reference/bufstats::.
+
+    The CODE::stats:: output buffer of LINK::Classes/FluidBufStats:: will have the same number of channels as the input buffer, each one containing the statistics of its corresponding channel in the input buffer. Because the dimension of time is summarised statistically, the frames in the CODE::stats:: buffer do not represent time as they normally would. The first seven frames in every channel of the CODE::stats:: buffer will have the seven statistics computed on the input buffer channel. After these first seven frames, there will be seven more frames for each derivative requested, each containing the seven statistical summaries for the corresponding derivative.
+
+    For example if the input to LINK::Classes/FluidBufStats:: is a three-channel buffer and CODE::numDerivs:: = 1 the output CODE::stats:: buffer would contain:
+
+    TABLE::
+    ## 
+    ch 0 mean
+     || 
+    ch 0 std dev
+     || 
+    ch 0 skewness
+     || 
+    ch 0 kurtosis
+     || 
+    ch 0 low
+     || 
+    ch 0 middle
+     || 
+    ch 0 high
+     || 
+    ch 0 deriv 1 mean
+     || 
+    ch 0 deriv 1 std dev
+     || 
+    ch 0 deriv 1 skewness
+     || 
+    ch 0 deriv 1 kurtosis
+     || 
+    ch 0 deriv 1 low
+     || 
+    ch 0 deriv 1 middle
+     || 
+    ch 0 deriv 1 high
+
+    ## 
+    ch 1 mean
+     || 
+    ch 1 std dev
+     || 
+    ch 1 skewness
+     || 
+    ch 1 kurtosis
+     || 
+    ch 1 low
+     || 
+    ch 1 middle
+     || 
+    ch 1 high
+     || 
+    ch 1 deriv 1 mean
+     || 
+    ch 1 deriv 1 std dev
+     || 
+    ch 1 deriv 1 skewness
+     || 
+    ch 1 deriv 1 kurtosis
+     || 
+    ch 1 deriv 1 low
+     || 
+    ch 1 deriv 1 middle
+     || 
+    ch 1 deriv 1 high
+
+    ## 
+    ch 2 mean
+     || 
+    ch 2 std dev
+     || 
+    ch 2 skewness
+     || 
+    ch 2 kurtosis
+     || 
+    ch 2 low
+     || 
+    ch 2 middle
+     || 
+    ch 2 high
+     || 
+    ch 2 deriv 1 mean
+     || 
+    ch 2 deriv 1 std dev
+     || 
+    ch 2 deriv 1 skewness
+     || 
+    ch 2 deriv 1 kurtosis
+     || 
+    ch 2 deriv 1 low
+     || 
+    ch 2 deriv 1 middle
+     || 
+    ch 2 deriv 1 high
+
+    ::
+
+Read more about FluidBufStats on the link::https://learn.flucoma.org/reference/stats##learn platform::.
+
+CLASSMETHODS::
+
+METHOD:: process, processBlocking
+  Processs the source LINK::Classes/Buffer:: on the LINK::Classes/Server::. CODE::processBlocking:: will execute directly in the server command FIFO, whereas CODE::process:: will delegate to a separate worker thread. The latter is generally only worthwhile for longer-running jobs where you don't wish to tie up the server.
+
+ARGUMENT:: server
+	The LINK::Classes/Server:: on which the buffers to be processed are allocated.
+
+
+
+
+
+
+
+
+ARGUMENT:: source
+
+    
+    The buffer to statistically summarise. Each channel of multichannel buffers will be computed independently.
+
+
+
+ARGUMENT:: startFrame
+
+    
+    The position (in frames) to begin the statistical analysis. LINK::Classes/FluidBufStats:: is unaware of what kind of time-series is in CODE::source:: and what the sample rate might be (whether it is audio samples or audio descriptors). It will begin analysis at the indicated frame index in CODE::source::. The default is 0.
+
+    STRONG::Constraints::
+
+    LIST::
+    ## 
+    Minimum: CODE::0::
+
+    ::
+
+
+ARGUMENT:: numFrames
+
+    
+    The number of frames to use in the statistical analysis. The default of -1 indicates to use all the frames from CODE::startFrame:: through the end of the CODE::source:: buffer.
+
+
+
+ARGUMENT:: startChan
+
+    
+    The channel from which to begin computing statistics for. The default is 0.
+
+    STRONG::Constraints::
+
+    LIST::
+    ## 
+    Minimum: CODE::0::
+
+    ::
+
+
+ARGUMENT:: numChans
+
+    
+    The number of channels to compute statistics for. The default of -1 indicates to compute statistics through the last channel in the CODE::source:: buffer.
+
+
+
+ARGUMENT:: stats
+
+    
+    The buffer to write the statistical summary into.
+
+
+
+ARGUMENT:: select
+
+    
+    An array of CODE::symbols:: indicating which statistics to return. The options are CODE::mean::, CODE::std::, CODE::skewness::, CODE::kurtosis::, CODE::low::, CODE::mid::, and CODE::high::. If nothing is specified, the object will return all the statistics. The statistics will always appear in their normal order, this argument just allows for a selection of them to be returned. Reordering the options in this argument will not reorder how the statistics are returned.
+
+
+
+ARGUMENT:: numDerivs
+
+    
+    The number of derivatives of the original time-series to compute statistics on. The default of 0 will compute statistics on no derivatives, only the original time-series itself. Setting this parameter > 0 (maximum of 2) will return the same seven statistics computed on consecutive derivatives of the channel's time-series. (CODE::numDerivs:: = 1 will return the channel's statistics and the statistics of the first derivative, CODE::numDerivs:: = 2 will return the channel's statistics and the statistics of the first and second derivatives.) The derivative statistics are useful to describe the rate of change of the time series.
+
+    STRONG::Constraints::
+
+    LIST::
+    ## 
+    Minimum: CODE::0::
+
+    ## 
+    Maximum: CODE::2::
+
+    ::
+
+
+ARGUMENT:: low
+
+    
+    The value at this percentile (indicated as 0.0-100.0) will be written into frame 4 (zero-counting). By default, it is percentile 0.0, which is the minimum value of the channel.
+
+    STRONG::Constraints::
+
+    LIST::
+    ## 
+    Minimum: CODE::0::
+
+    ## 
+    Maximum: MIN(CODE::middle, 100::)
+
+    ::
+
+
+ARGUMENT:: middle
+
+    
+    The value at this percentile (indicated as 0.0-100.0) will be written into frame 5 (zero-counting). By default, it is percentile 50.0, which is the median value of the channel.
+
+    STRONG::Constraints::
+
+    LIST::
+    ## 
+    Minimum: MAX(CODE::low, 0::)
+
+    ## 
+    Maximum: MIN(CODE::high, 100::)
+
+    ::
+
+
+ARGUMENT:: high
+
+    
+    The value at this percentile (indicated as 0.0-100.0) will be written into frame 6 (zero-counting). By default, it is percentile 100.0, which is the maximum value of the channel.
+
+    STRONG::Constraints::
+
+    LIST::
+    ## 
+    Minimum: MAX(CODE::middle, 0::)
+
+    ## 
+    Maximum: CODE::100::
+
+    ::
+
+
+ARGUMENT:: outliersCutoff
+
+    
+    A ratio of the inter quantile range (IQR) that defines a range from the median, outside of which data will be considered an outlier and not used to compute the statistical summary. For each frame, if a single value in any channel of that frame is considered an outlier (when compared to the rest of the values in its channel), the whole frame (on all channels) will not be used for statistical calculations. The default of -1 bypasses this function, keeping all frames in the statistical measurements.
+
+    STRONG::Constraints::
+
+    LIST::
+    ## 
+    Minimum: CODE::-1::
+
+    ::
+
+
+ARGUMENT:: weights
+
+    
+    A buffer to provide relative weighting of each frame in the CODE::source:: buffer when computing the statistics. Not providing a CODE::weights:: buffer will cause all the frames to be considered equally. This may be useful for weighting certain descriptors by the value of other descriptors (such as the loudness or pitch confidence of the sound). The provided buffer has to satisfy all of the following conditions:
+
+    LIST::
+    ## 
+    a single-channel
+
+    ## 
+    exactly the same amount of frames as CODE::source::
+
+    ## 
+    all values must be positive (anything lower than 0 will be rejected)
+
+    ::
+
+
+ 
+ARGUMENT:: freeWhenDone
+  Free the server instance when processing complete. Default CODE::true::
+
+ARGUMENT:: action
+	A function to be evaluated once the offline process has finished and all Buffer's instance variables have been updated on the client side. The function will be passed CODE::[features]:: as an argument.
+
+RETURNS:: An instance of the processor
+
+METHOD:: kr
+  Trigger the equivalent behaviour to CODE::processBlocking / process:: from a LINK::Classes/Synth::. Can be useful for expressing a sequence of buffer and data processing jobs to execute. Note that the work still executes on the server command FIFO (not the audio thread), and it is the caller's responsibility to manage the sequencing, using the CODE::done:: status of the various UGens.
+
+
+
+
+
+
+
+ARGUMENT:: source
+
+    
+    The buffer to statistically summarise. Each channel of multichannel buffers will be computed independently.
+
+
+
+ARGUMENT:: startFrame
+
+    
+    The position (in frames) to begin the statistical analysis. LINK::Classes/FluidBufStats:: is unaware of what kind of time-series is in CODE::source:: and what the sample rate might be (whether it is audio samples or audio descriptors). It will begin analysis at the indicated frame index in CODE::source::. The default is 0.
+
+    STRONG::Constraints::
+
+    LIST::
+    ## 
+    Minimum: CODE::0::
+
+    ::
+
+
+ARGUMENT:: numFrames
+
+    
+    The number of frames to use in the statistical analysis. The default of -1 indicates to use all the frames from CODE::startFrame:: through the end of the CODE::source:: buffer.
+
+
+
+ARGUMENT:: startChan
+
+    
+    The channel from which to begin computing statistics for. The default is 0.
+
+    STRONG::Constraints::
+
+    LIST::
+    ## 
+    Minimum: CODE::0::
+
+    ::
+
+
+ARGUMENT:: numChans
+
+    
+    The number of channels to compute statistics for. The default of -1 indicates to compute statistics through the last channel in the CODE::source:: buffer.
+
+
+
+ARGUMENT:: stats
+
+    
+    The buffer to write the statistical summary into.
+
+
+
+ARGUMENT:: select
+
+    
+    An array of CODE::symbols:: indicating which statistics to return. The options are CODE::mean::, CODE::std::, CODE::skewness::, CODE::kurtosis::, CODE::low::, CODE::mid::, and CODE::high::. If nothing is specified, the object will return all the statistics. The statistics will always appear in their normal order, this argument just allows for a selection of them to be returned. Reordering the options in this argument will not reorder how the statistics are returned.
+
+
+
+ARGUMENT:: numDerivs
+
+    
+    The number of derivatives of the original time-series to compute statistics on. The default of 0 will compute statistics on no derivatives, only the original time-series itself. Setting this parameter > 0 (maximum of 2) will return the same seven statistics computed on consecutive derivatives of the channel's time-series. (CODE::numDerivs:: = 1 will return the channel's statistics and the statistics of the first derivative, CODE::numDerivs:: = 2 will return the channel's statistics and the statistics of the first and second derivatives.) The derivative statistics are useful to describe the rate of change of the time series.
+
+    STRONG::Constraints::
+
+    LIST::
+    ## 
+    Minimum: CODE::0::
+
+    ## 
+    Maximum: CODE::2::
+
+    ::
+
+
+ARGUMENT:: low
+
+    
+    The value at this percentile (indicated as 0.0-100.0) will be written into frame 4 (zero-counting). By default, it is percentile 0.0, which is the minimum value of the channel.
+
+    STRONG::Constraints::
+
+    LIST::
+    ## 
+    Minimum: CODE::0::
+
+    ## 
+    Maximum: MIN(CODE::middle, 100::)
+
+    ::
+
+
+ARGUMENT:: middle
+
+    
+    The value at this percentile (indicated as 0.0-100.0) will be written into frame 5 (zero-counting). By default, it is percentile 50.0, which is the median value of the channel.
+
+    STRONG::Constraints::
+
+    LIST::
+    ## 
+    Minimum: MAX(CODE::low, 0::)
+
+    ## 
+    Maximum: MIN(CODE::high, 100::)
+
+    ::
+
+
+ARGUMENT:: high
+
+    
+    The value at this percentile (indicated as 0.0-100.0) will be written into frame 6 (zero-counting). By default, it is percentile 100.0, which is the maximum value of the channel.
+
+    STRONG::Constraints::
+
+    LIST::
+    ## 
+    Minimum: MAX(CODE::middle, 0::)
+
+    ## 
+    Maximum: CODE::100::
+
+    ::
+
+
+ARGUMENT:: outliersCutoff
+
+    
+    A ratio of the inter quantile range (IQR) that defines a range from the median, outside of which data will be considered an outlier and not used to compute the statistical summary. For each frame, if a single value in any channel of that frame is considered an outlier (when compared to the rest of the values in its channel), the whole frame (on all channels) will not be used for statistical calculations. The default of -1 bypasses this function, keeping all frames in the statistical measurements.
+
+    STRONG::Constraints::
+
+    LIST::
+    ## 
+    Minimum: CODE::-1::
+
+    ::
+
+
+ARGUMENT:: weights
+
+    
+    A buffer to provide relative weighting of each frame in the CODE::source:: buffer when computing the statistics. Not providing a CODE::weights:: buffer will cause all the frames to be considered equally. This may be useful for weighting certain descriptors by the value of other descriptors (such as the loudness or pitch confidence of the sound). The provided buffer has to satisfy all of the following conditions:
+
+    LIST::
+    ## 
+    a single-channel
+
+    ## 
+    exactly the same amount of frames as CODE::source::
+
+    ## 
+    all values must be positive (anything lower than 0 will be rejected)
+
+    ::
+
+
+ 
+ARGUMENT:: trig
+  A CODE::kr:: signal that will trigger execution
+
+ARGUMENT:: blocking
+  Whether to execute this process directly on the server command FIFO or delegate to a worker thread. See CODE::processBlocking/process:: for caveats.
+
+
+INSTANCEMETHODS::
+
+METHOD:: cancel
+  Cancels non-blocking processing
+
+METHOD:: wait
+  When called in the context of a LINK::Classes/Routine:: (it won't work otherwise), will block execution until the processor has finished. This can be convinient for writing sequences of processes more linearly than using lots of nested actions.
+  
+EXAMPLES::
+CODE::
+
+~src = Buffer.read(s,FluidFilesPath("Nicol-LoopE-M.wav"));
+
+//split in various chunks, collecting the indices in an array
+(
+~indices = Buffer.new(s);
+FluidBufOnsetSlice.processBlocking(s,~src,threshold:5,indices:~indices); // find slice points in src buffer
+~indices.loadToFloatArray(action:{
+	arg fa;
+	var features = Buffer(s);
+	var stats = Buffer(s);
+	var flat = Buffer(s);
+	~ds = FluidDataSet(s);
+	fa.doAdjacentPairs{ // take in turn, the start and stop point of every slice
+		arg start, end, i;
+		FluidBufMFCC.processBlocking(s,~src,start,end-start,features:features); // doo the mfcc analysis
+		FluidBufStats.processBlocking(s,features,stats:stats); // get the statistical summary of the mfcc analysis
+		FluidBufFlatten.processBlocking(s,stats,startFrame:5,numFrames:1,destination:flat); // copy out the median mfcc values into a flattened buffer
+		~ds.addPoint("slice-%".format(i),flat); // add those values to the dataset
+	};
+	~ds.print;
+});
+)
+
+::
+STRONG::Derivative::
+CODE::
+
+// this example sorts some tones by the derivative of the pitch analysis
+// this provides a sorted order of the tones with the tones that "glissando down" on one end
+// and the tones that "glissando up" on the other end
+
+// we'll record into this buffer
+~src = Buffer.alloc(s,s.sampleRate*10);
+
+(
+// a simple random sliding bell synth,
+// let this play for all 10 seconds, as it's recording into a buffer!
+{
+	var trig = Impulse.ar(1.5);
+	var freq = Lag.ar(TRand.ar(trig: trig),TRand.ar(0.5, trig: trig)).exprange(333,666);
+	var mul = Decay.ar(trig * TRand.ar(0.1,10,trig),TRand.ar(0.5,1.1,trig));
+	var sig = SinOsc.ar(freq,mul:mul).atan * 0.1;
+	var env = EnvGen.kr(Env([0,1,1,0],[0.03,~src.duration-0.06,0.03]));
+	RecordBuf.ar(sig,~src,loop:0,doneAction:2);
+	sig;
+}.play;
+)
+
+//split in various chunks, collecting the indices in an array
+(
+~indices = Buffer.new(s);
+FluidBufOnsetSlice.processBlocking(s,~src,threshold:0.01,indices:~indices,action:{
+	~indices.loadToFloatArray(action:{
+		arg array;
+		~indices_array = array.add(~src.numFrames);
+		"found % slice points: ".format(~indices_array.size).post;
+		~indices_array.postln;
+	});
+});
+)
+
+// analyze them for pitch including the first derivative, save the median of the 1st derivative
+(
+~pitch_analysis = Buffer(s);
+~stats = Buffer(s);
+~deriv_1_medians = Buffer(s);
+~indices_array.doAdjacentPairs{
+	arg start, end, i; // get the start and end of each slice
+
+	// analyze that slice for pitch
+	FluidBufPitch.processBlocking(s,~src,start,end-start,features:~pitch_analysis);
+
+	// get the stats of the analysis and the stats of the derivative (only channel 1 though, not pitch conf)
+	FluidBufStats.processBlocking(s,~pitch_analysis,numChans:1,stats:~stats,numDerivs:1);
+
+	// write the median of the derivative (index 12) into the derivative medians buffer
+	FluidBufCompose.processBlocking(s,~stats,startFrame:12,numFrames:1,destination:~deriv_1_medians,destStartFrame:i);
+};
+~deriv_1_medians.loadToFloatArray(action:{
+	arg fa;
+	"here are the % median values of derivative 1 of the pitch analysis".format(fa.size).postln;
+	fa.postln;
+	~sorted_indices = fa.order; // the the indexes in a sorted order
+	~sorted_indices.postln;
+});
+)
+
+//play in loop the slice in order of pitch direction (the median of the slice's pitch variation) - mouse on the left should be descending, in the middle should be more stable, and it should be ascending on the right.
+(
+Buffer.loadCollection(s,~sorted_indices,action:{
+	arg buf;
+	{
+		var which = MouseX.kr(0,BufFrames.kr(buf)-1).floor;
+		var index = Index.kr(buf,which);
+		var start = BufRd.kr(1,~indices,index,0,1);
+		var end = BufRd.kr(1,~indices,index+1,0,1);
+		var phs = Phasor.ar(0,1,start,end);
+		BufRd.ar(1,~src,phs);
+	}.play;
+};)
+)
+
+::
+STRONG::Weights::
+CODE::
+// consider trying to extract the pitch from this recording
+~src = Buffer.read(s,FluidFilesPath("Tremblay-ASWINE-ScratchySynth-M.wav"),0,44100 * 6);
+
+~src.play;
+
+// a look at the pitch analysis shows a quite eratic time series
+(
+~pitch_analysis = Buffer(s);
+FluidBufPitch.processBlocking(s,~src,features:~pitch_analysis);
+FluidWaveform(~src,featuresBuffer:~pitch_analysis,stackFeatures:true,bounds:Rect(0,0,1600,400));
+)
+
+// if one were to take the average pitch from this time series it doesn't sound right;
+(
+~stats = Buffer(s);
+FluidBufStats.processBlocking(s,~pitch_analysis,stats:~stats,numChans:1);
+{
+	var sig = SinOsc.ar(BufRd.kr(1,~stats,0),0,-20.dbamp);
+	var srcsig = PlayBuf.ar(1,~src,BufRateScale.ir(~src));
+	var env = EnvGen.kr(Env([0,1,1,0],[0.03,~src.duration-0.06,0.03]),doneAction:2);
+	sig = sig + srcsig;
+	sig = sig * env;
+	sig.dup;
+}.play;
+)
+
+(
+// we'll use the pitch confidence to weight the statistical analysis so our mean will be a weighted mean based on how confident the pitch algorithm is in the pitch it is returning;
+~conf = Buffer(s);
+FluidBufCompose.processBlocking(s,~pitch_analysis,startChan:1,numChans:1,destination:~conf);
+FluidBufStats.processBlocking(s,~pitch_analysis,stats:~stats,weights:~conf);
+{
+	var sig = SinOsc.ar(BufRd.kr(2,~stats,0)[0],0,-20.dbamp);
+	var srcsig = PlayBuf.ar(1,~src,BufRateScale.ir(~src));
+	var env = EnvGen.kr(Env([0,1,1,0],[0.03,~src.duration-0.06,0.03]),doneAction:2);
+	sig = sig + srcsig;
+	sig = sig * env;
+	sig.dup;
+}.play;
+)
+
+// now it's too low, how about we threshold the conf
+(
+~threshed = Buffer(s);
+FluidBufThresh.processBlocking(s,~conf,destination:~threshed,threshold:0.97);
+FluidBufStats.processBlocking(s,~pitch_analysis,stats:~stats,weights:~threshed);
+{
+	var sig = SinOsc.ar(BufRd.kr(2,~stats,0)[0],0,-20.dbamp);
+	var srcsig = PlayBuf.ar(1,~src,BufRateScale.ir(~src));
+	var env = EnvGen.kr(Env([0,1,1,0],[0.03,~src.duration-0.06,0.03]),doneAction:2);
+	sig = sig + srcsig;
+	sig = sig * env;
+	sig.dup;
+}.play;
+)
+::
+STRONG::Outliers::
+CODE::
+
+// let's try to find the pitch of this trombone tone
+~src = Buffer.read(s,FluidFilesPath("Olencki-TenTromboneLongTones-M.wav"),numFrames:44100*3.3);
+
+~src.play;
+
+// do the pitch analysis
+(
+~pitch_analysis = Buffer(s);
+FluidBufPitch.processBlocking(s,~src,features:~pitch_analysis);
+)
+
+// find the mean frequency... seems quite wrong, perhaps because there is some silence in the sound file with erroneous pitch values
+(
+~stats = Buffer(s);
+FluidBufStats.processBlocking(s,~pitch_analysis,stats:~stats,numChans:1);
+{
+	var sig = LFTri.ar(BufRd.kr(1,~stats,0),0,-20.dbamp);
+	var srcsig = PlayBuf.ar(1,~src,BufRateScale.ir(~src));
+	var env = EnvGen.kr(Env([0,1,1,0],[0.03,~src.duration-0.06,0.03]),doneAction:2);
+	sig = sig + srcsig;
+	sig = sig * env;
+	sig.dup;
+}.play;
+)
+
+(
+// using outliersCutoff, we can first remove any outliers, then take the mean pitch value...much more accurate!
+~stats = Buffer(s);
+FluidBufStats.processBlocking(s,~pitch_analysis,stats:~stats,outliersCutoff:1,numChans:1);
+{
+	var sig = LFTri.ar(BufRd.kr(1,~stats,0),0,-20.dbamp);
+	var srcsig = PlayBuf.ar(1,~src,BufRateScale.ir(~src));
+	var env = EnvGen.kr(Env([0,1,1,0],[0.03,~src.duration-0.06,0.03]),doneAction:2);
+	sig = sig + srcsig;
+	sig = sig * env;
+	sig.dup;
+}.play;
+)
+
+::
+STRONG::A didactic example::
+CODE::
+// make a buffer of known length
+b = Buffer.alloc(s,101);
+
+// add known values - here, a ramp up
+b.setn(0, Array.fill(101,{|i|i / 100}));
+
+// create a new buffer as destinations
+c = Buffer.new(s);
+
+//run the process on them
+(
+Routine{
+	t = Main.elapsedTime;
+	FluidBufStats.process(s, b, stats:c, numDerivs:1).wait;
+	(Main.elapsedTime - t).postln;
+}.play
+)
+
+// list the statistics. The first seven are for the source buffer values themselves, the last seven for the first derivative of the source buffer.
+c.getn(0,c.numFrames,{|item|item.postln;})
+
+// replace the source values by a ramp down
+b.setn(0, Array.fill(101,{|i| 1 - (i / 100)}));
+
+// run the process and read the values
+FluidBufStats.process(s, b, stats:c, numDerivs:1, action:{c.getn(0,c.numFrames,{|item|item.postln;})});
+
+// replace the source values by halfsine
+b.setn(0, Array.fill(101,{|i| (i * pi/ 100).sin}));
+b.plot
+
+// run the process and read the values
+FluidBufStats.process(s, b, stats:c, numDerivs:1, action:{c.getn(0,c.numFrames,{|item|item.postln;})});
+
+// replace the source values by partial halfsine
+b.setn(0, Array.fill(101,{|i| (i * pi/ 50).sin.max(0)}));
+b.plot
+
+// run the process and read the values
+FluidBufStats.process(s, b, stats:c, numDerivs:1, action:{c.getn(0,c.numFrames,{|item|item.postln;})});
+
+// replace the source values by positive white noise
+b.setn(0, Array.fill(101,{1.0.rand}));
+b.plot
+
+// run the process and read the values
+FluidBufStats.process(s, b, stats:c, numDerivs:1, action:{c.getn(0,c.numFrames,{|item|item.postln;})});
+::

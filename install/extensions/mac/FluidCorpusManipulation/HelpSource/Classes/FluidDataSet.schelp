@@ -1,0 +1,642 @@
+TITLE:: FluidDataSet
+SUMMARY:: A set of data associated with identifiers.
+CATEGORIES:: Libraries>FluidCorpusManipulation
+RELATED:: Classes/FluidLabelSet,Classes/FluidDataSetQuery,Classes/FluidKDTree,Classes/FluidKNNClassifier,Classes/FluidKMeans,Classes/Dictionary
+DESCRIPTION::
+
+    
+    FluidDataSet is a container associating data points with identifiers.
+
+
+    
+
+Read more about FluidDataSet on the link::https://learn.flucoma.org/reference/dataset##learn platform::.
+
+CLASSMETHODS::
+
+METHOD:: new
+
+ARGUMENT:: server 
+
+  The LINK::Classes/Server:: on which to construct this object
+ 
+ 
+
+INSTANCEMETHODS::
+ 
+ METHOD:: addPoint
+
+      
+    Add a new point to the FluidDataSet. The dimensionality of the FluidDataSet is governed by the size of the first point added. If the identifier already exists, or if the size of the data does not match the dimensionality of the FluidDataSet an error will be reported.
+
+
+ARGUMENT:: identifier
+
+    
+    The identifier for the point.
+
+
+ARGUMENT:: buffer
+
+    
+    A LINK::Classes/Buffer:: containing the data for the point.
+
+
+ 
+ARGUMENT:: action 
+
+  A function to execute when the server has completed running addPoint
+
+METHOD:: getPoint
+
+      
+    Retrieve a point from the data set into a LINK::Classes/Buffer::. If the identifier does not exist an error will be reported.
+
+
+ARGUMENT:: identifier
+
+    
+    The identifier for the point to be retrieved.
+
+
+ARGUMENT:: buffer
+
+    
+    A LINK::Classes/Buffer:: where the retrieved data will be stored.
+
+
+ 
+ARGUMENT:: action 
+
+  A function to execute when the server has completed running getPoint
+
+METHOD:: setPoint
+
+      
+    Set the point. If the identifier exists, this method behaves like updatePoint. If the identifier doesn't exist, it behaves like addPoint.
+
+
+ARGUMENT:: identifier
+
+    
+    The identifier for this point.
+
+
+ARGUMENT:: buffer
+
+    
+    A LINK::Classes/Buffer:: containing the data for the point.
+
+
+ 
+ARGUMENT:: action 
+
+  A function to execute when the server has completed running setPoint
+
+METHOD:: updatePoint
+
+      
+    Update an existing identifier's data. If the identifier does not exist, or if the size of the data does not match the dimensionality of the FluidDataSet an error will be reported.
+
+
+ARGUMENT:: identifier
+
+    
+    The identifier for this point.
+
+
+ARGUMENT:: buffer
+
+    
+    A LINK::Classes/Buffer:: containing the data for the point.
+
+
+ 
+ARGUMENT:: action 
+
+  A function to execute when the server has completed running updatePoint
+
+METHOD:: deletePoint
+
+      
+    Remove a point from the data set. If the identifier doesn't exist an error will be reported.
+
+
+ARGUMENT:: identifier
+
+    
+    The identifier to be deleted.
+
+
+ 
+ARGUMENT:: action 
+
+  A function to execute when the server has completed running deletePoint
+
+METHOD:: merge
+
+      
+    Merge sourceDataSet in the current DataSet. It will replace the value of points with the same identifier if overwrite is set to 1. ​To add columns instead, see the 'transformJoin' method of FluidDataSetQuery.
+
+
+ARGUMENT:: sourceDataSet
+
+    
+    The source DataSet to be merged.
+
+
+ARGUMENT:: overwrite
+
+    
+    A flag to allow overwrite points with the same identifier.
+
+
+ 
+ARGUMENT:: action 
+
+  A function to execute when the server has completed running merge
+
+METHOD:: dump
+
+      
+    Dump the state of this object as a Dictionary.
+
+
+ 
+ARGUMENT:: action 
+
+  A function to execute when the server has completed running dump
+
+METHOD:: load
+
+      
+    Replace the internal state of the object from a LINK::Classes/Dictionary::.
+
+
+ARGUMENT:: dict
+
+    
+
+ 
+ARGUMENT:: action 
+
+  A function to execute when the server has completed running load
+
+METHOD:: print
+
+      
+    Post an abbreviated content of the DataSet in the window by default, but you can supply a custom action instead.
+
+
+ 
+ARGUMENT:: action 
+
+  A function to execute when the server has completed running print
+
+METHOD:: size
+
+      
+    The number of data points (entries / observations) in this model or dataset / labeset
+
+
+ 
+ARGUMENT:: action 
+
+  A function to execute when the server has completed running size
+
+METHOD:: cols
+
+      
+    The number of columns (dimensions) in this model or dataset / labeset
+
+
+ 
+ARGUMENT:: action 
+
+  A function to execute when the server has completed running cols
+
+METHOD:: clear
+
+      
+    Empty the data set.
+
+
+ 
+ARGUMENT:: action 
+
+  A function to execute when the server has completed running clear
+
+METHOD:: write
+
+      
+    Save the contents of the object to a JSON file on disk.
+
+
+ARGUMENT:: filename
+
+    
+    Path of the file to load from
+
+
+ 
+ARGUMENT:: action 
+
+  A function to execute when the server has completed running write
+
+METHOD:: read
+
+      
+    Replace the internal state of the object from a JSON file on disk.
+
+
+ARGUMENT:: filename
+
+    
+    Path of the file to load from
+
+
+ 
+ARGUMENT:: action 
+
+  A function to execute when the server has completed running read
+
+METHOD:: fromBuffer
+
+      
+    Import to the dataset the content of a LINK::Classes/Buffer::, with optional transposition, and a map of frames/channels to the original IDs as a FluidLabelSet.
+
+
+ARGUMENT:: buffer
+
+    
+    The buffer to read from. The dataset will be resized.
+
+
+ARGUMENT:: transpose
+
+    
+    If 0, each buffer frame becomes a dataset point, and each buffer channel becomes a dataset dimension. If 1, channels become points, and frames become dimensions.
+
+
+ARGUMENT:: labelSet
+
+    
+    The FluidLabelSet from which to retrieve the point's IDs associated with their reference frame number (or channel number if transposed).
+
+
+ 
+ARGUMENT:: action 
+
+  A function to execute when the server has completed running fromBuffer
+
+METHOD:: toBuffer
+
+      
+    Dump the content of the dataset to a LINK::Classes/Buffer::, with optional transposition, and a map of frames/channels to the original IDs as a FluidLabelSet.
+
+
+ARGUMENT:: buffer
+
+    
+    The buffer to write to. It will be resized.
+
+
+ARGUMENT:: transpose
+
+    
+    If 0, each dataset point becomes a buffer frame, and each dataset dimension becomes a buffer channel. If 1, points become channels, and dimensions become frames.
+
+
+ARGUMENT:: labelSet
+
+    
+    The FluidLabelSet in which to dump the point's IDs associated with their reference frame number (or channel number if transposed).
+
+
+ 
+ARGUMENT:: action 
+
+  A function to execute when the server has completed running toBuffer
+
+METHOD:: getIds
+
+      
+    Export the dataset identifier to a FluidLabelSet.
+
+
+ARGUMENT:: labelSet
+
+    
+    The FluidLabelSet to export to. Its content will be replaced.
+
+
+ 
+ARGUMENT:: action 
+
+  A function to execute when the server has completed running getIds
+
+METHOD:: kNearestDist
+
+      
+    Get the distances of the CODE::k:: nearest neighbours to a point. Note that this is a brute force distance measure, and comparatively inefficient for repeated queries against large datasets. For such cases, LINK::Classes/FluidKDTree:: will be more efficient.
+
+
+ARGUMENT:: buffer
+
+    
+    A LINK::Classes/Buffer:: containing a data point to match against. The number of frames in the buffer must match the dimensionality of the DataSet.
+
+
+ARGUMENT:: k
+
+    
+    The number of nearest neighbours to return. The identifiers will be sorted, beginning with the nearest.
+
+
+ 
+ARGUMENT:: action 
+
+  A function to execute when the server has completed running kNearestDist
+
+METHOD:: kNearest
+
+      
+    Returns the identifiers of the CODE::k:: points nearest to the one passed. Note that this is a brute force distance measure, and comparatively inefficient for repeated queries against large datasets. For such cases, LINK::Classes/FluidKDTree:: will be more efficient.
+
+
+ARGUMENT:: buffer
+
+    
+    A LINK::Classes/Buffer:: containing a data point to match against. The number of frames in the buffer must match the dimensionality of the DataSet.
+
+
+ARGUMENT:: k
+
+    
+    The number of nearest neighbours to return. The identifiers will be sorted, beginning with the nearest.
+
+
+ 
+ARGUMENT:: action 
+
+  A function to execute when the server has completed running kNearest
+
+ 
+EXAMPLES::
+CODE::
+
+(
+~ds = FluidDataSet(s);
+~databuf = Buffer.loadCollection(s,[0]);
+)
+
+// add a point
+(
+~ds.addPoint("my-point",~databuf);
+~ds.print;
+)
+
+// setPoint adds a point or, if the identifier exists, updates the point
+(
+fork{
+	~databuf.set(0,99);
+	~ds.setPoint("my-point",~databuf);
+	s.sync;
+	~databuf.set(0,87);
+	~ds.setPoint("another-point",~databuf);
+	~ds.print;
+}
+)
+
+// update an existing point
+(
+~databuf.set(0,236);
+~ds.updatePoint("another-point",~databuf);
+~ds.print;
+)
+
+// get a point
+(
+~ds.getPoint("my-point",~databuf);
+~databuf.loadToFloatArray(action:{
+	arg fa;
+	fa.postln;
+});
+)
+
+// delete a point
+(
+~ds.deletePoint("my-point");
+~ds.print;
+)
+
+::
+strong::Adding an audio analysis to a DataSet::
+code::
+
+~src = Buffer.read(s,FluidFilesPath("Tremblay-ASWINE-ScratchySynth-M.wav"));
+
+// add just the mean mfcc values to the dataset
+(
+~mfccs = Buffer(s);
+~stats = Buffer(s);
+~flat = Buffer(s);
+FluidBufMFCC.processBlocking(s,~src,features:~mfccs);
+FluidBufStats.processBlocking(s,~mfccs,stats:~stats,select:[\mean]);
+FluidBufFlatten.processBlocking(s,~stats,destination:~flat);
+FluidDataSet(s).addPoint("ASWINE",~flat).print;
+)
+
+// use .fromBuffer to add *every* mfcc analysis to the dataset
+(
+FluidBufMFCC.processBlocking(s,~src,features:~mfccs);
+FluidDataSet(s).fromBuffer(~mfccs).print;
+)
+
+::
+strong::Four ways to get a bunch of data into a dataset::
+code::
+// Using routine
+(
+fork{
+	var point = Buffer.alloc(s,1);
+	var ds = FluidDataSet(s);
+	s.sync;
+	10.do{
+		arg i;
+		point.set(0,i);
+		ds.addPoint("point-%".format(i),point);
+		s.sync;
+	};
+	ds.print;
+};
+)
+
+//Using Dictionary
+(
+var dict = Dictionary.new;
+dict.put(\cols,1);
+dict.put(\data,
+	Dictionary.newFrom(
+		[ // one could, of course, make this array more programmatically
+			"point-0",0,
+			"point-1",1,
+			"point-2",2,
+			"point-3",3,
+			"point-4",4,
+			"point-5",5,
+			"point-6",6,
+			"point-7",7,
+			"point-8",8,
+			"point-9",9
+		]
+	)
+);
+FluidDataSet(s).load(dict).print;
+)
+
+// Using a synth
+(
+var ds = FluidDataSet.new(s);
+{
+	var trig = Impulse.kr(20);
+	var count = PulseCount.kr(trig) - 1;
+	var buf = LocalBuf(1);
+	BufWr.kr(count, buf);
+	FluidDataSetWr.kr(ds, idNumber: count, buf: buf, trig: trig);
+	FreeSelf.kr(count - 8);
+}.play.onFree{ds.print}
+)
+
+// from a buffer
+(
+fork{
+	var buf = Buffer.loadCollection(s,(0..9));
+	s.sync;
+	FluidDataSet(s).fromBuffer(buf).print;
+}
+)
+::
+strong::More Messages::
+code::
+
+~src = Buffer.read(s,FluidFilesPath("Tremblay-ASWINE-ScratchySynth-M.wav"));
+
+// use .fromBuffer to add *every* mfcc analysis to the dataset
+(
+~mfccs = Buffer(s);
+FluidBufMFCC.processBlocking(s,~src,features:~mfccs);
+~ds = FluidDataSet(s).fromBuffer(~mfccs).print;
+)
+
+// write to disk
+~ds.write(Platform.defaultTempDir+/+"temp_dataset.json");
+
+// read from disk
+(
+~loaded_ds = FluidDataSet(s).read(Platform.defaultTempDir+/+"temp_dataset.json");
+~loaded_ds.print;
+)
+
+// how many data points are there
+~ds.size
+
+// how many dimensions
+~ds.cols
+
+// dump the contents to a language side dict
+(
+~ds.dump({
+	arg dict;
+	dict["data"].keysValuesDo{
+		arg k, v;
+		"%:\t%".format(k,v).postln;
+	};
+	"this data set has % dimensions".format(dict["cols"]).postln;
+});
+)
+
+// clear it
+(
+~ds.clear;
+~ds.print;
+)
+::
+
+strong::Merge two data sets that have the same number of dimensions::
+code::
+
+// Make two simple dataset
+a = Dictionary.newFrom([\cols, 2, \data, Dictionary.newFrom([\one, [1, 1.1] ,\two, [2, 2.2]])]);
+b = FluidDataSet(s)
+b.load(a)
+b.print
+
+a = Dictionary.newFrom([\cols, 2, \data, Dictionary.newFrom([\three, [3, 3.3] , \two, [0.2, -2]])]);
+c = FluidDataSet(s)
+c.load(a)
+c.print
+
+b.merge(c)
+b.print //common items not replaced
+
+b.merge(c,1)
+b.print //now they are
+
+::
+
+strong::Using:: code::.fromBuffer::
+code::
+
+~src = Buffer.read(s,FluidFilesPath("Tremblay-ASWINE-ScratchySynth-M.wav"));
+
+// use .fromBuffer to add *every* mfcc analysis to the dataset
+// pass a labelset so the identifiers aren't just numbers
+(
+fork{
+	var mfccs = Buffer(s);
+	FluidBufMFCC.processBlocking(s,~src,features:mfccs);
+	s.sync;
+	~ls = FluidLabelSet(s);
+	mfccs.numFrames.do{
+		arg i;
+		// in the label set that gets used to create
+		// the identifiers, the identifier is the
+		// frame number in the buffer (an integer)
+		// and the "label" is what will be come the
+		// identifier in the dataset
+		~ls.addLabel(i,"ASWINE-mfcc-%".format(i));
+	};
+	~ds = FluidDataSet(s).fromBuffer(mfccs,0,~ls).print;
+}
+)
+
+::
+strong::Nearest Neighbour Search in a DataSet::
+
+Note: A FluidDataSet can be queried with an input point to return the nearest match to that point. Note: This feature is can be computationally expensive on a large dataset, as it needs to compute the distance of the queried point to each point in the dataset. If you need to perform multiple nearest neighbour queries on a fluid.dataset~ it is recommended to use FluidKDTree. This facility is most useful with smaller, ephemeral datasets such as those returned by FluidDataSetQuery.
+
+code::
+
+// create a small DataSet...
+f = FluidDataSet(s)
+// and fill it with a grid of data
+f.load(Dictionary.newFrom(["cols", 2, "data", Dictionary.newFrom(9.collect{|i|["item-%".format(i), [i.div(3), i.mod(3)] / 2]}.flatten(1))]))
+
+// the data looks like this
+// (item-0 -> [ 0.0, 0.0 ]) (item-1 -> [ 0.0, 0.5 ]) (item-2 -> [ 0.0, 1.0 ])
+// (item-3 -> [ 0.5, 0.0 ]) (item-4 -> [ 0.5, 0.5 ]) (item-5 -> [ 0.5, 1.0 ])
+// (item-6 -> [ 1.0, 0.0 ]) (item-7 -> [ 1.0, 0.5 ]) (item-8 -> [ 1.0, 1.0 ])
+
+// create a query buffer...
+b = Buffer.alloc(s,2)
+
+// and fill it with a point
+b.sendCollection([1,0]);
+
+// and request 9 nearest neighbours
+f.kNearest(b,9,{|x|x.postln;})
+
+// and request the distances
+f.kNearestDist(b,9,{|x|x.postln;})
+::
